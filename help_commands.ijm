@@ -1,0 +1,1 @@
+run("CONVERT PIXELS COORDINATES", "help");

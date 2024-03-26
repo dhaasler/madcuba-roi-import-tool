@@ -1,0 +1,2 @@
+#CRTFv0 CASA Region Text Format version 0
+box [[248.09526620deg, -24.47695120deg], [248.09519704deg, -24.47688162deg]] coord=ICRS, linewidth=1, linestyle=-, symsize=1, symthick=1, color=magenta, font="Noto Sans", fontsize=11, fontstyle=normal, usetex=false
