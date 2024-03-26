@@ -1,23 +1,24 @@
 /* 
  * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
+ * A cube or image must be opened and selected before running this macro
  *
-Possible ROIs:
-Rectangular box; the two coordinates are two opposite corners:
-    box[[x1, y1], [x2, y2]]
-Center box; [x, y] define the center point of the box and [x_width, y_width] the width of the sides:
-    centerbox[[x, y], [x_width, y_width]]
-Rotated box; [x, y] define the center point of the box; [x_width, y_width] the width of the sides; rotang the rotation angle:
-    rotbox[[x, y], [x_width, y_width], rotang]
-Polygon; there could be many [x, y] corners; note that the last point will connect with the first point to close the polygon:
-    poly[[x1, y1], [x2, y2], [x3, y3], ...]
-Circle; center of the circle [x,y], r is the radius:
-    circle[[x, y], r]
-Annulus; center of the circle is [x, y], [r1, r2] are inner and outer radii:
-    annulus[[x, y], [r1, r2]]
-Ellipse; center of the ellipse is [x, y]; semi-axes are [b1, b2] starting with the vertical axis when first drawing the ellipse; 
-    position angle of vertical axis is pa:
-    ellipse[[x, y], [b1, b2], pa]
-*/
+ * Possible ROIs:
+ * Rectangular box; the two coordinates are two opposite corners:
+ *     box[[x1, y1], [x2, y2]]
+ * Center box; [x, y] define the center point of the box and [x_width, y_width] the width of the sides:
+ *     centerbox[[x, y], [x_width, y_width]]
+ * Rotated box; [x, y] define the center point of the box; [x_width, y_width] the width of the sides; rotang the rotation angle:
+ *     rotbox[[x, y], [x_width, y_width], rotang]
+ * Polygon; there could be many [x, y] corners; note that the last point will connect with the first point to close the polygon:
+ *     poly[[x1, y1], [x2, y2], [x3, y3], ...]
+ * Circle; center of the circle [x,y], r is the radius:
+ *     circle[[x, y], r]
+ * Annulus; center of the circle is [x, y], [r1, r2] are inner and outer radii:
+ *     annulus[[x, y], [r1, r2]]
+ * Ellipse; center of the ellipse is [x, y]; semi-axes are [b1, b2] starting with the vertical axis when first drawing the ellipse; 
+ *     position angle of vertical axis is pa:
+ *     ellipse[[x, y], [b1, b2], pa]
+ */
 
 coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
@@ -25,98 +26,101 @@ geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", 
 path = File.openDialog("Select a Region File");
 fx = File.openAsString(path);
 
-rows = split(fx,"\n\r");      //Separate file into rows
-for (i=0; i<rows.length; i++) {        //Iterate through csv list
-    if (startsWith(rows[i],"#") == 0) {          //skip first line
+rows = split(fx,"\n\r");                    //Separate file into rows
+for (i=0; i<rows.length; i++) {             //Iterate through csv list
+    if (startsWith(rows[i],"#") == 0) {     //skip first line
         if (indexOf(rows[i], "coord=") != -1) { 
             data = split(substring(rows[i], indexOf(rows[i], "coord="), indexOf(rows[i], "coord=")+30), "=,"); 
                     // search where the coord system is and store it at data[1]. +30 is arbitrary, to give enough characters for every possibility
             if (call("FITS_CARD.getStr","RADESYS") != data[1]) print("WARNING:  Coordinate system in ALMA Roi different that that in cube");
         }
-        data = split(rows[i], "][,");       // store different important data in an array. Some of these strings are preceded by a black space.
-                                             // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
-                                             // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
-
+        data = split(rows[i], "][,");   // store different important data in an array. Some of these strings are preceded by a black space.
+                                        // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
+                                        // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
+        
+        // // Uncomment for quick data debug
         // print("New run");
         // for (j=0; j<data.length; j++) {
         //     print("data[" + j + "]: '" + data[j] + "'");
         // }
 
-        if (indexOf(data[0], geometry[0]) == 0) {    // BOX (CASA)
-            b = parseALMACoord(data[1], data[2]);
-            corr = 0.5;                        // a correction of half a pixel must be done. 
-            x1 = parseFloat(b[0]) + corr;      // Madcuba sets the coordinates of a pixel in the lower left corner in a FITS image
-            y1 = parseFloat(b[1]) + corr;      // with this correction it gets shifted to the center of the pixel
-            b2 = parseALMACoord(data[4], data[5]);
-            x_width = parseFloat(b2[0]) - parseFloat(b[0]);
-            y_width = parseFloat(b2[1]) - parseFloat(b[1]);
-            makeRectangle(x1, y1, x_width, y_width);     // Madcuba does the rounding when working with makeRectangle
+        if (indexOf(data[0], geometry[0]) == 0) {           // BOX (CASA)
+            corner1 = parseALMACoord(data[1], data[2]);
+            corner2 = parseALMACoord(data[4], data[5]);
+            corr = 0.5;                             // a correction of half a pixel must be done
+            x1 = parseFloat(corner1[0]) + corr;     // Madcuba sets the coordinates of a pixel in the lower left corner in a FITS image
+            y1 = parseFloat(corner1[1]) + corr;     // with this correction it gets shifted to the center of the pixel
+            x2 = parseFloat(corner2[0]) + corr;
+            y2 = parseFloat(corner2[1]) + corr;
+            x_width = x2 - x1;
+            y_width = y2 - y1;
+            makeRectangle(x1, y1, x_width, y_width);    // Madcuba does the rounding when working with makeRectangle
 
-        } else if (indexOf(data[0], geometry[1]) == 0) {  // CENTER BOX (CARTA)
-            centro = parseALMACoord(data[1], data[2]);
+        } else if (indexOf(data[0], geometry[1]) == 0) {    // CENTER BOX (CARTA)
+            center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
-            x_center = parseFloat(centro[0]) + corr;
-            y_center = parseFloat(centro[1]) + corr;
-            b = parseALMAxy(data[4], data[5]);
-            x1 = x_center + parseFloat(b[0]/2);   // + porque RA aumenta hacia izda y madcuba usa la esquina inferior izda del box.
-            y1 = y_center - parseFloat(b[1]/2);
-            x_width = -parseFloat(b[0]);  // - porque madcuba pone el ancho hacia la dcha como positivo, 
-                                          // y el ancho en coordenadas de izda a dcha es cambio negativo.
-            y_width = parseFloat(b[1]);
-            makeRectangle(x1, y1, x_width, y_width);     // Madcuba does the rounding when working with makeRectangle
+            x_center = parseFloat(center[0]) + corr;
+            y_center = parseFloat(center[1]) + corr;
+            widths = parseALMAxy(data[4], data[5]);
+            x1 = x_center + parseFloat(widths[0]/2);    // + because RA increases to the left and madcuba uses the lower left corner
+            y1 = y_center - parseFloat(widths[1]/2);
+            x_width = -parseFloat(widths[0]);   // - because parseALMAxy calculated a positive width to the left 
+                                                //and madcuba needs a width to the right of the rectangle
+            y_width = parseFloat(widths[1]);
+            makeRectangle(x1, y1, x_width, y_width);    // Madcuba does the rounding when working with makeRectangle
 
-        } else if (indexOf(data[0], geometry[2]) == 0) {  // ROTATED BOX
+        } else if (indexOf(data[0], geometry[2]) == 0) {    // ROTATED BOX
             pa = parseALMAangle(data[6]);
-            centro = parseALMACoord(data[1], data[2]);
+            center = parseALMACoord(data[1], data[2]);
             b = parseALMAxy(data[4], data[5]);
-            rotatedRect(parseFloat(centro[0]), parseFloat(centro[1]), b[0]/2, b[1]/2, pa);
+            rotatedRect(parseFloat(center[0]), parseFloat(center[1]), b[0]/2, b[1]/2, pa);
 
-        } else if (indexOf(data[0], geometry[3]) == 0) {  // POLYGON
-            indice = 0;
+        } else if (indexOf(data[0], geometry[3]) == 0) {    // POLYGON
+            idx = 0;
             numb = 1;
-            corr = 0.5;    // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
+            corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
             x = newArray(round(data.length/3));
             y = newArray(round(data.length/3));
             do {         
                 b = parseALMACoord(data[numb], data[numb+1]); 
-                x[indice] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
-                y[indice] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
-                indice++;
-                numb = numb + 3; 
-            } while (b[0] !=-1) 
-            x = Array.trim(x, indice-1);    // Trim extra elements of the array that were created before
-            y = Array.trim(y, indice-1);
+                x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
+                y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
+                idx++;
+                numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
+            } while (b[0] != -1) 
+            x = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
+            y = Array.trim(y, idx-1);
             makeSelection("polygon", x, y);
             // Array.show(x, y);
  
-        } else if (indexOf(data[0], geometry[4]) == 0) {  // CIRCLE 
+        } else if (indexOf(data[0], geometry[4]) == 0) {    // CIRCLE 
             pa = 0;
-            centro = parseALMACoord(data[1], data[2] );
+            center = parseALMACoord(data[1], data[2] );
             corr = 0.5;
-            x_center = parseFloat(centro[0]) + corr;
-            y_center = parseFloat(centro[1]) + corr;
-            b = parseALMAxy(data[3], data[3]);
-            toellipse(x_center, y_center, parseFloat(abs(b[0])), parseFloat(abs(b[1])), pa);
+            x_center = parseFloat(center[0]) + corr;
+            y_center = parseFloat(center[1]) + corr;
+            radius = parseALMAxy(data[3], data[3]);
+            toellipse(x_center, y_center, parseFloat(abs(radius[0])), parseFloat(abs(radius[1])), pa);
          
-        } else if (indexOf(data[0], geometry[5]) == 0) {  // ANNULUS -------------------------- 
-            centro = parseALMACoord(data[1], data[2]);
+        } else if (indexOf(data[0], geometry[5]) == 0) {    // ANNULUS -------------------------- 
+            center = parseALMACoord(data[1], data[2]);
             b = parseALMAxy(data[3], data[3]);
-            annulus(round(centro[0]), round(centro[1]), round(abs(b[0])), round(abs(b[1])));
+            annulus(round(center[0]), round(center[1]), round(abs(b[0])), round(abs(b[1])));
 
-        } else if (indexOf(data[0], geometry[6]) == 0) {  // ELLIPSE
+        } else if (indexOf(data[0], geometry[6]) == 0) {    // ELLIPSE
             pa = parseALMAangle(data[6]);
-            centro = parseALMACoord(data[1], data[2]);
+            center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
-            x_center = parseFloat(centro[0]) + corr;
-            y_center = parseFloat(centro[1]) + corr;
-            b = parseALMAxy(data[5], data[4]); // for an ellipse the first is y_width
-            if (abs(b[0]) > abs(b[1])) {  // if x_width > y_width
-                bmaj = b[0];
-                bmin = b[1];
+            x_center = parseFloat(center[0]) + corr;
+            y_center = parseFloat(center[1]) + corr;
+            axes = parseALMAxy(data[5], data[4]);   // for an ellipse the first is y_width
+            if (abs(axes[0]) > abs(axes[1])) {      // if x_width > y_width
+                bmaj = axes[0];
+                bmin = axes[1];
                 pa = pa-PI/2;  //change position angle to "change" x1, y1 to the biggest axis (madcuba accepts only ellipticity<=1)
             } else {
-                bmaj = b[1];
-                bmin = b[0];
+                bmaj = axes[1];
+                bmin = axes[0];
             }
             toellipse(x_center, y_center, parseFloat(abs(bmaj)), parseFloat(abs(bmin)), pa);
         }
@@ -206,7 +210,7 @@ function toellipse(x, y, bmaj, bmin, pa) {
 function parseALMAangle (val) {
     // Returns the angle in radians
     coordUnits = newArray("deg", "rad", "arcmin", "arcsec");      
-    for (j=0; j<coordUnits.length; j++) if (indexOf(val, coordUnits[j]) != -1)  unitsval=j; // read coordinate unit
+    for (j=0; j<coordUnits.length; j++) if (indexOf(val, coordUnits[j]) != -1)  unitsval=j;     // read coordinate unit
     angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));  
     if (unitsval == 0)  angle = angle*PI/180.0;
     else if (unitsval == 2) angle = (angle*PI/(180.0*60.0));
@@ -219,7 +223,7 @@ function parseALMACoord (ra, dec) {
     coordUnits = newArray ("deg", "rad", "pix");
     unitsval= 10;
     output = newArray(2);
-    for (j=0; j<coordUnits.length; j++) if (indexOf(ra, coordUnits[j]) != -1) unitsval=j;   // read coordinate unit
+    for (j=0; j<coordUnits.length; j++) if (indexOf(ra, coordUnits[j]) != -1) unitsval=j;       // read coordinate unit
     if (unitsval == 10) {   // Sexagesimal Coordinates
         // TEMPORARY. Quick abortion of function for the polygon drawing. May be better put in another simpler and more coherent way.
         // Temporary in here because unitsval gets assigned 10 and the last iteration in the 'while' loop enters here. It has to yoild -1.   
@@ -256,7 +260,7 @@ function parseALMACoord (ra, dec) {
             }
             output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, ""); 
             output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, ""); 
- 
+
         } else if ( unitsval == 2) {
             output[0] = rafin;
             output[1] = decfin;
@@ -290,5 +294,4 @@ function parseALMAxy (valx,valy) {
     else if (unitsval == 3) coord[1] = (value/3600.0) / parseFloat(call("FITS_CARD.getDbl","CDELT2"));
     else if (unitsval == 4) coord[1] = value;
     return coord;
-} 
- 
+}
