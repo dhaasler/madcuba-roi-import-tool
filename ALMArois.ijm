@@ -173,6 +173,16 @@ function annulus(x, y, r1, r2) {
     makeSelection("polygon", x1, y1); 
 }
 
+/** 
+ * Draw a rotated rectangle given the input parameters
+ * All parameters are in pixels except angle in radians
+ * 
+ * @param x  X coordinates for the center of the rectangle
+ * @param y  Y coordinates for the center of the rectangle
+ * @param halfWidth  Half of the width of the rectangle
+ * @param halfHeight  Half of the height of the rectangle
+ * @param angle  Rotation Angle in a counterclockwise direction
+ */
 function rotatedRect(x, y, halfWidth, halfHeight, angle) {
     x1 = newArray(4);
     y1 = newArray(4);
@@ -196,8 +206,17 @@ function rotatedRect(x, y, halfWidth, halfHeight, angle) {
     // Array.show(x1, y1); 
 }
 
+/** 
+ * Draw ellipse given the input parameters
+ * All parameters are in pixels except pa in radians
+ * 
+ * @param x  X coordinates for the center of the ellipse
+ * @param y  Y coordinates for the center of the ellipse
+ * @param bmaj  Major axis
+ * @param bmin  Minor axis
+ * @param pa  Position Angle of the major axis in a counterclockwise direction
+ */
 function toellipse(x, y, bmaj, bmin, pa) {
-    // all parameters in pixels except pa in radians 
     x1 = x + bmaj*sin(pa);
     y1 = y - bmaj*cos(pa);
     x2 = x - bmaj*sin(pa);
@@ -207,8 +226,13 @@ function toellipse(x, y, bmaj, bmin, pa) {
     // split(data[4], "deg");     // Jesus put this here but it does nothing of value?
 }
 
+/** 
+ * Convert angle to radians
+ * 
+ * @param val  Input angle with units 
+ * @return  Converted angle in radians
+ */
 function parseALMAangle (val) {
-    // Returns the angle in radians
     coordUnits = newArray("deg", "rad", "arcmin", "arcsec");      
     for (j=0; j<coordUnits.length; j++) if (indexOf(val, coordUnits[j]) != -1)  unitsval=j;     // read coordinate unit
     angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));  
@@ -218,8 +242,14 @@ function parseALMAangle (val) {
     return angle;
 } 
 
+/**
+ * Convert coordinates to a FITS image pixel 
+ * 
+ * @param ra  RA with units
+ * @param dec  DEC with units
+ * @return  Pixel of the image containing input coordinates
+ */
 function parseALMACoord (ra, dec) {
-    // Convert coordinates to pixel 
     coordUnits = newArray ("deg", "rad", "pix");
     unitsval= 10;
     output = newArray(2);
@@ -269,8 +299,14 @@ function parseALMACoord (ra, dec) {
     return output; 
 } 
 
+/**
+ * Convert an arc in the sky to pixels
+ * 
+ * @param valx  RA arc in the sky with units 
+ * @param valy  DEC arc in the sky with units
+ * @return  Converted arc
+ */
 function parseALMAxy (valx,valy) {
-    // Convert an arc in the sky to pixels
     coordUnits = newArray("deg", "rad", "arcmin", "arcsec", "pix");  
     unitsval = -1;
     coord = newArray(2);
