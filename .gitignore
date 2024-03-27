@@ -10,5 +10,5 @@ integrated_PN_6-5_TM1.fits
 *.gif
 
 # Log files
-*.Log
+*.log
 *.last
