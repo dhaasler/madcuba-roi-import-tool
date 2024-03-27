@@ -20,10 +20,11 @@
  *     ellipse[[x, y], [b1, b2], pa]
  */
 
-macro "Import ROIs" {
-    coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
-    geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
+// Global variables
+var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
+var geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse");
 
+macro "Import ROIs" {
     path = File.openDialog("Select a Region File");
     fx = File.openAsString(path);
 
