@@ -135,6 +135,7 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             }
             toellipse(x_center, y_center, parseFloat(abs(bmaj)), parseFloat(abs(bmin)), pa);
         }
+        run("GET SPECTRUM", "roi");
     }
 }
 

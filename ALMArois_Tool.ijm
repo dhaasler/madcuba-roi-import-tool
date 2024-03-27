@@ -137,6 +137,7 @@ macro "Import ROIs Action Tool - C0a0L18f8L818f" {
                 }
                 toellipse(x_center, y_center, parseFloat(abs(bmaj)), parseFloat(abs(bmin)), pa);
             }
+            run("GET SPECTRUM", "roi");
         }
     }
 }

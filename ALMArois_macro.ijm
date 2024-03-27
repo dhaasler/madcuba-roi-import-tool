@@ -137,6 +137,7 @@ macro "Import ROIs" {
                 }
                 toellipse(x_center, y_center, parseFloat(abs(bmaj)), parseFloat(abs(bmin)), pa);
             }
+            run("GET SPECTRUM", "roi");
         }
     }
 }
