@@ -106,8 +106,19 @@ macro "Import ROIs" {
             
             } else if (indexOf(data[0], geometry[5]) == 0) {    // ANNULUS -------------------------- 
                 center = parseALMACoord(data[1], data[2]);
-                b = parseALMAxy(data[3], data[3]);
-                annulus(round(center[0]), round(center[1]), round(abs(b[0])), round(abs(b[1])));
+                corr = 0.5;
+                x_center = parseFloat(center[0]) + corr;
+                y_center = parseFloat(center[1]) + corr;
+                r1 = parseALMAxy(data[3], data[3]);
+                r2 = parseALMAxy(data[4], data[4]);
+                x2 = x_center - parseFloat(r2[1]);   // outer circle
+                y2 = y_center - parseFloat(r2[1]);
+                makeOval(x2, y2, r2[1]*2, r2[1]*2);
+                x1 = x_center - parseFloat(r1[1]);   // inner circle
+                y1 = y_center - parseFloat(r1[1]);
+                setKeyDown("alt");
+                makeOval(x1, y1, r1[1]*2, r1[1]*2);
+                // annulus(round(center[0]), round(center[1]), round(abs(b[0])), round(abs(b[1])));    // old version
 
             } else if (indexOf(data[0], geometry[6]) == 0) {    // ELLIPSE
                 pa = parseALMAangle(data[6]);
@@ -137,45 +148,45 @@ macro "Import ROIs" {
  * ---------------------------------
  */
 
-function annulus(x, y, r1, r2) {
-// angulo 0 en Norte 
-    ar1 = atan(2/r1);  //interior 
-    ar2 = atan(2/r2);  //exterior 
-    number2 = 2*PI/ar2;
-    number1 = 2*PI/ar1;
-    x1 = newArray(number2+number1+3);
-    y1 = newArray(number2+number1+3);
+// function annulus(x, y, r1, r2) {
+// // angulo 0 en Norte 
+//     ar1 = atan(2/r1);  //interior 
+//     ar2 = atan(2/r2);  //exterior 
+//     number2 = 2*PI/ar2;
+//     number1 = 2*PI/ar1;
+//     x1 = newArray(number2+number1+3);
+//     y1 = newArray(number2+number1+3);
 
-    x1[0] = x + r1;
-    y1[0] = y;
-    for (j=0; j<number2; j++) { 
-        x1[j+1]= x + r2*cos(j*ar2); 
-        y1[j+1]= y + r2*sin(j*ar2); 
-    }
-    // print (y1[number2+1]);
-    x1[number2+2] = x + r2; 
-    y1[number2+2] = y - 1;
-    // x1[number2+3] = x+r1; 
-    // y1[number2+3] =  y-1;
+//     x1[0] = x + r1;
+//     y1[0] = y;
+//     for (j=0; j<number2; j++) { 
+//         x1[j+1]= x + r2*cos(j*ar2); 
+//         y1[j+1]= y + r2*sin(j*ar2); 
+//     }
+//     // print (y1[number2+1]);
+//     x1[number2+2] = x + r2; 
+//     y1[number2+2] = y - 1;
+//     // x1[number2+3] = x+r1; 
+//     // y1[number2+3] =  y-1;
       
 
-    for (j=0; j<number1; j++) { 
-        k = j+number2+3;
-        x1[k]= x + r1*cos(-j*ar1); 
-        y1[k]= y - 1 + r1*sin(-j*ar1); 
-    }
+//     for (j=0; j<number1; j++) { 
+//         k = j+number2+3;
+//         x1[k]= x + r1*cos(-j*ar1); 
+//         y1[k]= y - 1 + r1*sin(-j*ar1); 
+//     }
       
-    x1[x1.length-1] = x + r1;
-    y1[x1.length-1] = y;
+//     x1[x1.length-1] = x + r1;
+//     y1[x1.length-1] = y;
       
-    for (j=0; j<x1.length; j++) { 
-        x1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x1[j]);
-        y1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y1[j]);
-    }
+//     for (j=0; j<x1.length; j++) { 
+//         x1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x1[j]);
+//         y1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y1[j]);
+//     }
 
-    Array.show(x1, y1); 
-    makeSelection("polygon", x1, y1); 
-}
+//     Array.show(x1, y1); 
+//     makeSelection("polygon", x1, y1); 
+// }
 
 /** 
  * Draw a rotated rectangle given the input parameters
