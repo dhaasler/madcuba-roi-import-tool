@@ -1,8 +1,8 @@
 ## My ignored files
 
 # Testing images
-test.image/
-integrated_PN_6-5_TM1.fits
+*/test.image/
+*/integrated_PN_6-5_TM1.fits
 
 # File extensions
 *.eps
