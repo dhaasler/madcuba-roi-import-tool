@@ -3,25 +3,31 @@
  * A cube or image must be opened and selected before running this macro
  *
  * Possible ROIs:
+ * Point as coordinates:
+ *     symbol [x, y]
+ * Line; the two coordinates are the vertices:
+ *     line [[x1, y1], [x2, y2]]
+ * Polyline; there could be many [x, y] vertices:
+ *     polyline [[x1, y1], [x2, y2], [x3, y3], ...] 
  * Rectangular box; the two coordinates are two opposite corners:
- *     box[[x1, y1], [x2, y2]]
+ *     box [[x1, y1], [x2, y2]]
  * Center box; [x, y] define the center point of the box and [x_width, y_width] the width of the sides:
- *     centerbox[[x, y], [x_width, y_width]]
+ *     centerbox [[x, y], [x_width, y_width]]
  * Rotated box; [x, y] define the center point of the box; [x_width, y_width] the width of the sides; rotang the rotation angle:
- *     rotbox[[x, y], [x_width, y_width], rotang]
+ *     rotbox [[x, y], [x_width, y_width], rotang]
  * Polygon; there could be many [x, y] corners; note that the last point will connect with the first point to close the polygon:
- *     poly[[x1, y1], [x2, y2], [x3, y3], ...]
+ *     poly [[x1, y1], [x2, y2], [x3, y3], ...]
  * Circle; center of the circle [x,y], r is the radius:
- *     circle[[x, y], r]
+ *     circle [[x, y], r]
  * Annulus; center of the circle is [x, y], [r1, r2] are inner and outer radii:
- *     annulus[[x, y], [r1, r2]]
+ *     annulus [[x, y], [r1, r2]]
  * Ellipse; center of the ellipse is [x, y]; semi-axes are [b1, b2] starting with the vertical axis when first drawing the ellipse; 
  *     position angle of vertical axis is pa:
- *     ellipse[[x, y], [b1, b2], pa]
+ *     ellipse [[x, y], [b1, b2], pa]
  */
 
 coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
-geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
+geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
 path = File.openDialog("Select a Region File");
 fx = File.openAsString(path);
@@ -44,7 +50,44 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
         //     print("data[" + j + "]: '" + data[j] + "'");
         // }
 
-        if (indexOf(data[0], geometry[0]) == 0) {           // BOX (CASA)
+        if (indexOf(data[0], geometry[0]) == 0) {           // POINT
+            point = parseALMACoord(data[1], data[2]);
+            corr = 0.5;
+            x = parseFloat(point[0]) + corr;
+            y = parseFloat(point[1]) + corr;
+            makePoint(x, y);
+            // print("painted: " + x + ", " + y);
+
+        } else if (indexOf(data[0], geometry[1]) == 0) {    // LINE
+            point1 = parseALMACoord(data[1], data[2]);
+            corr = 0.5;
+            x1 = parseFloat(point1[0]) + corr;
+            y1 = parseFloat(point1[1]) + corr - 1;  // Madcuba takes the information from and paints the line in the pixel above the vertices
+            point2 = parseALMACoord(data[4], data[5]);
+            x2 = parseFloat(point2[0]) + corr;      // maybe it is a nomenclature problem like the one in point, also takes info from incorrect pixel
+            y2 = parseFloat(point2[1]) + corr - 1;
+            makeLine(x1, y1, x2, y2);
+            // print("from: " + x1 + ", " + y1);
+            // print("to: " + x2 + ", " + y2);
+        
+        } else if (indexOf(data[0], geometry[2]) == 0) {    // POLYLINE (almost the same as polygon)
+            idx = 0;
+            numb = 1;
+            corr = 0.5;     // may not need correction here because the bad behaviour of lines in madcuba counteracts the need for correction
+            x = newArray(round(data.length/3));
+            y = newArray(round(data.length/3));
+            do {         
+                b = parseALMACoord(data[numb], data[numb+1]); 
+                x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+                y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+                idx++;
+                numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
+            } while (b[0] != -1) 
+            x = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
+            y = Array.trim(y, idx-1);
+            makeSelection("polyline", x, y);
+
+        } else if (indexOf(data[0], geometry[3]) == 0) {    // BOX (CASA)
             corner1 = parseALMACoord(data[1], data[2]);
             corner2 = parseALMACoord(data[4], data[5]);
             corr = 0.5;                             // a correction of half a pixel must be done
@@ -56,7 +99,7 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             y_width = y2 - y1;
             makeRectangle(x1, y1, x_width, y_width);    // Madcuba does the rounding when working with makeRectangle
 
-        } else if (indexOf(data[0], geometry[1]) == 0) {    // CENTER BOX (CARTA)
+        } else if (indexOf(data[0], geometry[4]) == 0) {    // CENTER BOX (CARTA)
             center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
             x_center = parseFloat(center[0]) + corr;
@@ -69,13 +112,13 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             y_width = parseFloat(widths[1]);
             makeRectangle(x1, y1, x_width, y_width);    // Madcuba does the rounding when working with makeRectangle
 
-        } else if (indexOf(data[0], geometry[2]) == 0) {    // ROTATED BOX
+        } else if (indexOf(data[0], geometry[5]) == 0) {    // ROTATED BOX
             pa = parseALMAangle(data[6]);
             center = parseALMACoord(data[1], data[2]);
             b = parseALMAxy(data[4], data[5]);
             rotatedRect(parseFloat(center[0]), parseFloat(center[1]), b[0]/2, b[1]/2, pa);
 
-        } else if (indexOf(data[0], geometry[3]) == 0) {    // POLYGON
+        } else if (indexOf(data[0], geometry[6]) == 0) {    // POLYGON
             idx = 0;
             numb = 1;
             corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
@@ -93,7 +136,7 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             makeSelection("polygon", x, y);
             // Array.show(x, y);
  
-        } else if (indexOf(data[0], geometry[4]) == 0) {    // CIRCLE 
+        } else if (indexOf(data[0], geometry[7]) == 0) {    // CIRCLE 
             pa = 0;
             center = parseALMACoord(data[1], data[2] );
             corr = 0.5;
@@ -102,7 +145,7 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             radius = parseALMAxy(data[3], data[3]);
             toellipse(x_center, y_center, parseFloat(abs(radius[0])), parseFloat(abs(radius[1])), pa);
          
-        } else if (indexOf(data[0], geometry[5]) == 0) {    // ANNULUS -------------------------- 
+        } else if (indexOf(data[0], geometry[8]) == 0) {    // ANNULUS -------------------------- 
             center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
             x_center = parseFloat(center[0]) + corr;
@@ -118,7 +161,7 @@ for (i=0; i<rows.length; i++) {             //Iterate through csv list
             makeOval(x1, y1, r1[1]*2, r1[1]*2);
             // annulus(round(center[0]), round(center[1]), round(abs(b[0])), round(abs(b[1])));    // old version
 
-        } else if (indexOf(data[0], geometry[6]) == 0) {    // ELLIPSE
+        } else if (indexOf(data[0], geometry[9]) == 0) {    // ELLIPSE
             pa = parseALMAangle(data[6]);
             center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
