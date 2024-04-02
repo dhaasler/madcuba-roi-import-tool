@@ -26,18 +26,18 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
- // Global variables
+// Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 var geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
-macro "Import ROIs Action Tool - C0a0L18f8L818f" {
+macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f10R T8f09o Tef09I" {     // RoI: C037T0b10R T6b09o Tcb09I
 
-    path = File.openDialog("Select a Region File");
+    path = File.openDialog("Select a ROI File");
     fx = File.openAsString(path);
 
-    rows = split(fx,"\n\r");                    //Separate file into rows
-    for (i=0; i<rows.length; i++) {             //Iterate through csv list
-        if (startsWith(rows[i],"#") == 0) {     //skip first line
+    rows = split(fx,"\n\r");                    // separate file into rows
+    for (i=0; i<rows.length; i++) {             // iterate through csv list
+        if (startsWith(rows[i],"#") == 0) {     // skip first line
             if (indexOf(rows[i], "coord=") != -1) {
                 data = split(substring(rows[i], indexOf(rows[i], "coord="), indexOf(rows[i], "coord=")+30), "=,");
                         // search where the coord system is and store it at data[1]. +30 is arbitrary, to give enough characters for every possibility
@@ -47,7 +47,7 @@ macro "Import ROIs Action Tool - C0a0L18f8L818f" {
                                             // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
                                             // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
 
-            // // Uncomment for quick data debug
+            // // uncomment for quick data log
             // print("New run");
             // for (j=0; j<data.length; j++) {
             //     print("data[" + j + "]: '" + data[j] + "'");
@@ -186,8 +186,15 @@ macro "Import ROIs Action Tool - C0a0L18f8L818f" {
     }
 }
 
-macro "Import ROIs Action Tool Options" {
-    showMessage("Import ROIs", "Custom made macro to convert CASA and CARTA ROIs to MADCUBA. A cube or image must be opened and selected before running this macro.");
+macro "Import ROIs from CARTA Action Tool Options" {
+    showlog = getBoolean("Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n"
+    + "A cube or image must be opened and selected before running this macro.", 
+    'Version info', "Ok");
+    if (showlog == true) {
+        showMessage("version log", 
+        "v0.1\n"
+        + "First version");
+    }
 }
 
 /*

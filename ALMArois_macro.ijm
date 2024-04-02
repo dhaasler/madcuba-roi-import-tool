@@ -30,8 +30,9 @@
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 var geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
-macro "Import ROIs" {
-    path = File.openDialog("Select a Region File");
+macro "Import ROIs from CARTA" {
+    
+    path = File.openDialog("Select a ROI File");
     fx = File.openAsString(path);
 
     rows = split(fx,"\n\r");                    //Separate file into rows

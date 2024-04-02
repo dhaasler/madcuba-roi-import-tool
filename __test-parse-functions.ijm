@@ -3,7 +3,7 @@ geometry = newArray ("box", "centerbox", "rotbox", "poly", "circle", "annulus", 
 
 //path = File.openDialog("Select a Region File");
 //fx = File.openAsString(path);
-fx = File.openAsString("/home/david/Research/Tests/madcuba-alma-rois/rectangle-carta.crtf");
+fx = File.openAsString("/home/david/Research/Tests/madcuba-alma-rois/ROIs/rectangle-carta.crtf");
 
 rows = split(fx,"\n\r");      //Separate file into rows
 for (i=0; i<rows.length; i++) {         //Iterate through csv list
@@ -128,21 +128,22 @@ print("bottom side DEC = " + bottom_ra);
 
 
 
-// // TEST MADCUBA CONVERT_PIXELS-COORDINATES. Seems that madcuba uses a string taken from the float, and the float gets rounded to 4 decimals.
-// // When adding the fifth decimal 1 by 1, the float represented on screen is rounded correctly and ends up going up after 10 iterations
-// float_short = 248.0953;
-// float_long = 248.09532649;
-// string_short = "248.0953";
-// string_long = "248.09532649";
-// print("Using the 4-decimal float :" + float_short + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", float_short, dec1_deg, system));
-// print("Using the 8-decimal float :" + float_long + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", float_long, dec1_deg, system));
-// print("Using the 4-decimal string :" + string_short + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", string_short, dec1_deg, system));
-// print("Using the 8-decimal string :" + string_long + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", string_long, dec1_deg, system));
+// TEST MADCUBA CONVERT_PIXELS-COORDINATES. Seems that madcuba uses a string taken from the float, and the float gets rounded to 4 decimals.
+// When adding the fifth decimal 1 by 1, the float represented on screen is rounded correctly and ends up going up after 10 iterations
+system = "";
+float_short = 248.0953;
+float_long = 248.09532649;
+string_short = "248.0953";
+string_long = "248.09532649";
+print("Using the 4-decimal float :" + float_short + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", float_short, dec_deg, system));
+print("Using the 8-decimal float :" + float_long + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", float_long, dec_deg, system));
+print("Using the 4-decimal string :" + string_short + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", string_short, dec_deg, system));
+print("Using the 8-decimal string :" + string_long + ", the pixel is: " + call("CONVERT_PIXELS_COORDINATES.coord2FitsX", string_long, dec_deg, system));
 
-// // TESTS number of float decimals
-// a = 0.00043443;
+// TESTS number of float decimals
+a = 0.00043443;
 
-// for ( count = 0; count<30; count++ ){
-//   print("0.00043443 + " + count + "=" + a);
-//   a = a+0.00000001;
-// }
+for ( count = 0; count<30; count++ ){
+  print("0.00043443 + " + count + "=" + a);
+  a = a+0.00000001;
+}

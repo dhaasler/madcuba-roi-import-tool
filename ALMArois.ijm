@@ -29,7 +29,7 @@
 coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
-path = File.openDialog("Select a Region File");
+path = File.openDialog("Select a ROI File");
 fx = File.openAsString(path);
 
 rows = split(fx,"\n\r");                    //Separate file into rows
