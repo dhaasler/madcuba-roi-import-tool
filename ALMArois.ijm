@@ -32,9 +32,9 @@ geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox",
 path = File.openDialog("Select a ROI File");
 fx = File.openAsString(path);
 
-rows = split(fx,"\n\r");                    //Separate file into rows
-for (i=0; i<rows.length; i++) {             //Iterate through csv list
-    if (startsWith(rows[i],"#") == 0) {     //skip first line
+rows = split(fx,"\n\r");                    // separate file into rows
+for (i=0; i<rows.length; i++) {             // iterate through csv list
+    if (startsWith(rows[i],"#") == 0) {     // skip first line
         if (indexOf(rows[i], "coord=") != -1) { 
             data = split(substring(rows[i], indexOf(rows[i], "coord="), indexOf(rows[i], "coord=")+30), "=,"); 
                     // search where the coord system is and store it at data[1]. +30 is arbitrary, to give enough characters for every possibility
