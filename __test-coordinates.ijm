@@ -25,8 +25,8 @@ x3 = call("CONVERT_PIXELS_COORDINATES.coordString2FitsX",ra3,dec3, "ICRS");
 y3 = call("CONVERT_PIXELS_COORDINATES.coordString2FitsY",ra3,dec3, "ICRS");
 
 print("x3 = " + x3 + ", y3 = ", y3);
-pointX = parseFloat(x3)-1;
-pointY = 90-(parseFloat(y3)-1);
+pointX = parseFloat(x)-1;
+pointY = 90-(parseFloat(y)-1);
 makeSelection("point", newArray(pointX, 18, 18), newArray(pointY, 0, 17));
 
 

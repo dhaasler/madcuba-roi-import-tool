@@ -291,14 +291,38 @@ Using the `ctrl` key an alternative option is enabled for creating shapes. For t
 
 ## Plugin installation
 
+### Macro sets
+
+A macro file (.ijm) can contain more than one macro. To do that, each macro has to be wrapped in a macro command.
+
+    macro "Macro name" {
+        ...macro code...
+    }
+
+Macros in a macro set can use global variables to communicate with each other.
+
 ### Installation of macros
 
-To install a macro in madcuba the macro code must be wrapped inside a macro function.
-Macros in a macro set can use global variables to communicate with each other.
+Several options are available to install a macro in MADCUBA to have a quicker access to it:
+
+1. In the ImageJ window select Plugins > Macros > Instal...  This method lists the macro in this submenu, but it dissapears when MADCUBA is closed.
+2. Put the macro code wrapped in a macro command in `StartupMacros.txt` located in the folder MADCUBA_IJ > macros, and is also accesible from within MADCUBA in Plugins > Macros > StartupMacros...  With this option the macro will be automatically installed when opening MADCUBA and will be available in the Plugins > macros submenu.
+3. Installing it as a Plugin through Plugins > instal...  A window will ask for a folder to install the macro file into (the default location is recommended). With this option the macro will not disappear after closing MADCUBA and will always be available in the Plugins submenu.
 
 ### Installation of tools
 
-Macros can also be installed as tools to make them appear on the Toolset of imageJ.
+Macros can also be installed as tools to make them appear on the Toolset of imageJ. There are several types of tools, but only two have been tested so far.
 
+The first type of tool is the Image Tool. These tools perform an action when clicking the image when said tool is selected on the Toolbar (e.g the Rectangle tool). Its macro name must end with "Tool - xxxxx", where xxxxx defines the icon for the tool. Documentation about the icon is available [here](https://imagej.net/ij/developer/macro/macros.html#icons).
 
+    macro "Sample Tool - xxxxx {
+        ...macro code...
+    }
 
+Another type of Tool is the Action Tool, which perform an action when you click on their icon in the toolbar. The macro name must end with "Action Tool - xxxxx".
+
+    macro "Sample Action Tool - xxxxx {
+        ...macro code...
+    }
+
+To install a Macro Tool select Plugins > Install... in the ImageJ window and select a macro file that contains a macro Tool command. After that, the Tool will be available in the Toolbar of the ImageJ window. This Tool will not disappear when closing MADCUBA.
