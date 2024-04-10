@@ -78,8 +78,8 @@ for (i=0; i<rows.length; i++) {             // iterate through csv list
             y = newArray(round(data.length/3));
             do {         
                 b = parseALMACoord(data[numb], data[numb+1]); 
-                x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
-                y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+                x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
+                y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
                 idx++;
                 numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
             } while (b[0] != -1) 
@@ -347,8 +347,8 @@ function parseALMACoord (ra, dec) {
             output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, ""); 
 
         } else if ( unitsval == 2) {
-            output[0] = rafin;
-            output[1] = decfin;
+            output[0] = toString(parseFloat(rafin) + 1);      // correction to change 0,0 starting point to 1,1 starting point (currently used in madcuba)
+            output[1] = toString(parseFloat(decfin) + 1);     // when fits coordinates are properly implemented in MADCUBA this will have to change
         }      
     }
     return output; 

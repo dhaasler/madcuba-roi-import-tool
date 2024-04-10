@@ -1,2 +1,2 @@
 #CRTFv0 CASA Region Text Format version 0
-symbol [[248.09520277deg, -24.47691160deg], s] coord=ICRS, corr=[I], linewidth=2, linestyle=-, symsize=1, symthick=1, color=2ee6d6, font=Helvetica, fontsize=10, fontstyle=bold, usetex=false
+symbol [[16.2896pix, 17.1939pix], s] coord=ICRS, linewidth=2, linestyle=-, color=2ee6d6, symsize=1, symthick=1

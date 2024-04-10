@@ -1,2 +1,2 @@
 #CRTFv0 CASA Region Text Format version 0
-polyline [[248.09525832deg, -24.47693583deg], [248.09523867deg, -24.47693583deg], [248.09522749deg, -24.47686498deg], [248.09519011deg, -24.47685832deg]] coord=ICRS, corr=[I], linewidth=2, linestyle=-, symsize=1, symthick=1, color=2ee6d6, font=Helvetica, fontsize=10, fontstyle=bold, usetex=false
+polyline [[248.10001832deg, -24.48073545deg], [248.09981866deg, -24.48033903deg], [248.09957366deg, -24.48054138deg], [248.09938762deg, -24.48037621deg]] coord=ICRS, corr=[I], linewidth=2, linestyle=-, symsize=1, symthick=1, color=2ee6d6, font=Helvetica, fontsize=10, fontstyle=bold, usetex=false

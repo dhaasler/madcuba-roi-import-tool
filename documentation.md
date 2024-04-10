@@ -299,7 +299,7 @@ A macro file (.ijm) can contain more than one macro. To do that, each macro has 
         ...macro code...
     }
 
-Macros in a macro set can use global variables to communicate with each other.
+Macros in a macro file can use global variables to communicate with each other.
 
 ### Installation of macros
 
@@ -311,7 +311,7 @@ Several options are available to install a macro in MADCUBA to have a quicker ac
 
 ### Installation of tools
 
-Macros can also be installed as tools to make them appear on the Toolset of imageJ. There are several types of tools, but only two have been tested so far.
+Macros can also be installed as tools to have them appear on the Toolset of imageJ. There are several types of tools, but only two have been tested so far.
 
 The first type of tool is the Image Tool. These tools perform an action when clicking the image when said tool is selected on the Toolbar (e.g the Rectangle tool). Its macro name must end with "Tool - xxxxx", where xxxxx defines the icon for the tool. Documentation about the icon is available [here](https://imagej.net/ij/developer/macro/macros.html#icons).
 
@@ -325,4 +325,4 @@ Another type of Tool is the Action Tool, which perform an action when you click 
         ...macro code...
     }
 
-To install a Macro Tool select Plugins > Install... in the ImageJ window and select a macro file that contains a macro Tool command. After that, the Tool will be available in the Toolbar of the ImageJ window. This Tool will not disappear when closing MADCUBA.
+To install a Macro Tool select Plugins > Install... in the ImageJ window and select a macro file that contains a macro tool. After that, the Tool will be available in the Toolbar of the ImageJ window. This Tool will not disappear when closing MADCUBA.
