@@ -1,6 +1,8 @@
 /* 
  * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
  * A cube or image must be opened and selected before running this macro
+ * 
+ * "v0.1.2 - 20240410 - pixel to fits coordinates conversion corrected
  *
  * Possible ROIs:
  * Point as coordinates:
@@ -192,8 +194,8 @@ macro "Import ROIs from CARTA Action Tool Options" {
     'Version info', "Ok");
     if (showlog == true) {
         showMessage("version log", 
-        "v0.1\n"
-        + "First version");
+        "v0.1.2\n"
+        + "20240410 - pixel to fits coordinates conversion corrected");
     }
 }
 
