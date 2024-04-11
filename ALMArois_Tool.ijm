@@ -2,7 +2,7 @@
  * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
  * A cube or image must be opened and selected before running this macro
  * 
- * "v0.1.2 - 20240410 - pixel to fits coordinates conversion corrected
+ * "v0.1.2 - 20240410 -  pix coords to fits conversion corrected
  *
  * Possible ROIs:
  * Point as coordinates:
@@ -13,7 +13,7 @@
  *     polyline [[x1, y1], [x2, y2], [x3, y3], ...] 
  * Rectangular box; the two coordinates are two opposite corners:
  *     box [[x1, y1], [x2, y2]]
- * Center box; [x, y] define the center point of the box and [x_width, y_width] the width of the sides:
+ * Center box; [x, y] define the cemnter point of the box and [x_width, y_width] the width of the sides:
  *     centerbox [[x, y], [x_width, y_width]]
  * Rotated box; [x, y] define the center point of the box; [x_width, y_width] the width of the sides; rotang the rotation angle:
  *     rotbox [[x, y], [x_width, y_width], rotang]
@@ -49,11 +49,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                                             // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
                                             // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
 
-            // // uncomment for quick data log
-            // print("New run");
-            // for (j=0; j<data.length; j++) {
-            //     print("data[" + j + "]: '" + data[j] + "'");
-            // }
+            // uncomment for quick data log
+            print("New run");
+            for (j=0; j<data.length; j++) {
+                print("data[" + j + "]: '" + data[j] + "'");
+            }
 
             if (indexOf(data[0], geometry[0]) == 0) {           // POINT
                 point = parseALMACoord(data[1], data[2]);
@@ -125,20 +125,22 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
     
             } else if (indexOf(data[0], geometry[6]) == 0) {    // POLYGON
                 idx = 0;
-                numb = 1;
+                numb = 1;       // index from which to start to read data array
                 corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
                 x = newArray(round(data.length/3));
                 y = newArray(round(data.length/3));
                 do {         
+                    // print("entered data: " + idx);
                     b = parseALMACoord(data[numb], data[numb+1]); 
                     x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
                     y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
                     idx++;
                     numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
-                } while (b[0] != -1) 
-                x = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
-                y = Array.trim(y, idx-1);
-                makeSelection("polygon", x, y);
+                } while (b[0] != -1)
+                x2 = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
+                y2 = Array.trim(y, idx-1);
+                Array.show(x, x2);
+                makeSelection("polygon", x2, y2);
                 // Array.show(x, y);
      
             } else if (indexOf(data[0], geometry[7]) == 0) {    // CIRCLE 
@@ -150,7 +152,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 radius = parseALMAxy(data[3], data[3]);
                 toellipse(x_center, y_center, parseFloat(abs(radius[0])), parseFloat(abs(radius[1])), pa);
              
-            } else if (indexOf(data[0], geometry[8]) == 0) {    // ANNULUS -------------------------- 
+            } else if (indexOf(data[0], geometry[8]) == 0) {    // ANNULUS
                 center = parseALMACoord(data[1], data[2]);
                 corr = 0.5;
                 x_center = parseFloat(center[0]) + corr;
@@ -191,11 +193,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 macro "Import ROIs from CARTA Action Tool Options" {
     showlog = getBoolean("Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n"
     + "A cube or image must be opened and selected before running this macro.", 
-    'Version info', "Ok");
+    'Version info', "");
     if (showlog == true) {
         showMessage("version log", 
-        "v0.1.2\n"
-        + "20240410 - pixel to fits coordinates conversion corrected");
+        "v0.1.2  -  20240410\n"
+        + "pix coords to fits conversion corrected");
     }
 }
 
@@ -206,46 +208,6 @@ macro "Import ROIs from CARTA Action Tool Options" {
  * ---------------------------------
  * ---------------------------------
  */
-
-// function annulus(x, y, r1, r2) {
-// // angulo 0 en Norte
-//     ar1 = atan(2/r1);  //interior
-//     ar2 = atan(2/r2);  //exterior
-//     number2 = 2*PI/ar2;
-//     number1 = 2*PI/ar1;
-//     x1 = newArray(number2+number1+3);
-//     y1 = newArray(number2+number1+3);
-
-//     x1[0] = x + r1;
-//     y1[0] = y;
-//     for (j=0; j<number2; j++) {
-//         x1[j+1]= x + r2*cos(j*ar2);
-//         y1[j+1]= y + r2*sin(j*ar2);
-//     }
-//     // print (y1[number2+1]);
-//     x1[number2+2] = x + r2;
-//     y1[number2+2] = y - 1;
-//     // x1[number2+3] = x+r1;
-//     // y1[number2+3] =  y-1;
-
-
-//     for (j=0; j<number1; j++) {
-//         k = j+number2+3;
-//         x1[k]= x + r1*cos(-j*ar1);
-//         y1[k]= y - 1 + r1*sin(-j*ar1);
-//     }
-
-//     x1[x1.length-1] = x + r1;
-//     y1[x1.length-1] = y;
-
-//     for (j=0; j<x1.length; j++) {
-//         x1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x1[j]);
-//         y1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y1[j]);
-//     }
-
-//     Array.show(x1, y1);
-//     makeSelection("polygon", x1, y1);
-// }
 
 /**
  * Draw a rotated rectangle given the input parameters
@@ -330,10 +292,11 @@ function parseALMACoord (ra, dec) {
     for (j=0; j<coordUnits.length; j++) if (indexOf(ra, coordUnits[j]) != -1) unitsval=j;       // read coordinate unit
     if (unitsval == 10) {   // Sexagesimal Coordinates
         // TEMPORARY. Quick abortion of function for the polygon drawing. May be better put in another simpler and more coherent way.
-        // Temporary in here because unitsval gets assigned 10 and the last iteration in the 'while' loop enters here. It has to yoild -1.
+        // temporarily in here because unitsval gets assigned 10 and 
         if (indexOf(ra, "corr") == 0 || indexOf(ra, "corr") == 1) {
             output[0] = -1;
             output[1] = -1;
+        // end temporary fix
         } else {
             // right ascension
             par = split(ra, "hdms:");

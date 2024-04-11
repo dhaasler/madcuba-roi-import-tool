@@ -120,7 +120,7 @@ for (i=0; i<rows.length; i++) {             // iterate through csv list
 
         } else if (indexOf(data[0], geometry[6]) == 0) {    // POLYGON
             idx = 0;
-            numb = 1;
+            numb = 1;       // index from which to start to read data array
             corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
             x = newArray(round(data.length/3));
             y = newArray(round(data.length/3));
@@ -145,7 +145,7 @@ for (i=0; i<rows.length; i++) {             // iterate through csv list
             radius = parseALMAxy(data[3], data[3]);
             toellipse(x_center, y_center, parseFloat(abs(radius[0])), parseFloat(abs(radius[1])), pa);
          
-        } else if (indexOf(data[0], geometry[8]) == 0) {    // ANNULUS -------------------------- 
+        } else if (indexOf(data[0], geometry[8]) == 0) {    // ANNULUS
             center = parseALMACoord(data[1], data[2]);
             corr = 0.5;
             x_center = parseFloat(center[0]) + corr;
@@ -187,46 +187,6 @@ for (i=0; i<rows.length; i++) {             // iterate through csv list
  * ------ AUXILIARY FUNCTIONS ------
  * ---------------------------------
  */
-
-// function annulus(x, y, r1, r2) {
-// // angulo 0 en Norte 
-//     ar1 = atan(2/r1);  //interior 
-//     ar2 = atan(2/r2);  //exterior 
-//     number2 = 2*PI/ar2;
-//     number1 = 2*PI/ar1;
-//     x1 = newArray(number2+number1+3);
-//     y1 = newArray(number2+number1+3);
-
-//     x1[0] = x + r1;
-//     y1[0] = y;
-//     for (j=0; j<number2; j++) { 
-//         x1[j+1]= x + r2*cos(j*ar2); 
-//         y1[j+1]= y + r2*sin(j*ar2); 
-//     }
-//     // print (y1[number2+1]);
-//     x1[number2+2] = x + r2; 
-//     y1[number2+2] = y - 1;
-//     // x1[number2+3] = x+r1; 
-//     // y1[number2+3] =  y-1;
-      
-
-//     for (j=0; j<number1; j++) { 
-//         k = j+number2+3;
-//         x1[k]= x + r1*cos(-j*ar1); 
-//         y1[k]= y - 1 + r1*sin(-j*ar1); 
-//     }
-      
-//     x1[x1.length-1] = x + r1;
-//     y1[x1.length-1] = y;
-      
-//     for (j=0; j<x1.length; j++) { 
-//         x1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x1[j]);
-//         y1[j] = call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y1[j]);
-//     }
-
-//     Array.show(x1, y1); 
-//     makeSelection("polygon", x1, y1); 
-// }
 
 /** 
  * Draw a rotated rectangle given the input parameters
