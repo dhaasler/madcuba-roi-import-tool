@@ -196,22 +196,10 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 }
 
 macro "Import ROIs from CARTA Action Tool Options" {
-    // showlog = getBoolean("Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n"
-    // + "A cube or image must be opened and selected before running this macro.", 
-    // 'Version info', "");
-    // if (showlog == true) {
-    //     showMessage("version log", 
-    //     "v0.1.3  -  20240411\n"
-    //     + "fix reading of polygon vertices");
-    // }
-    showMessage("Info", "Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n \n"
-    + "Important: A cube or image must be opened and selected before running this macro.\n \n"
-    + version + " - " + date + "\n"
-    + changelog)
     showMessage("Info", "<html>"
-    + "<title>Page Title</title>"
-    + "Custom made macro to convert CASA and CARTA ROIs to MADCUBA. <br><br>"
-    + "Important: A cube or image must be opened and selected before running this macro. <br><br>"
+    + "<center>Custom made macro to convert CASA and CARTA RoIs to MADCUBA.<br><br></center>"
+    + "<strong>Important</strong>: A cube or image must be opened and selected before running this macro. <br><br>"
+    + "<h3>Changelog</h3>"
     + "<font size=-1>"
     + version + " - " + date + " <br>"
     + changelog);
