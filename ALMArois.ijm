@@ -119,22 +119,26 @@ for (i=0; i<rows.length; i++) {             // iterate through csv list
             rotatedRect(parseFloat(center[0]), parseFloat(center[1]), b[0]/2, b[1]/2, pa);
 
         } else if (indexOf(data[0], geometry[6]) == 0) {    // POLYGON
-            idx = 0;
+            stop = 0;
+            idx = 0;        // index to trim later
             numb = 1;       // index from which to start to read data array
             corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
             x = newArray(round(data.length/3));
             y = newArray(round(data.length/3));
-            do {         
+            do {
                 b = parseALMACoord(data[numb], data[numb+1]); 
                 x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
                 y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
+                if (data[numb+2] != " ") {      // stop when a double ]] appears (at the end of the vertices).
+                    stop=1;                     // ]] means there is no space afterwards, but a new keyword
+                }
                 idx++;
                 numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
-            } while (b[0] != -1) 
-            x = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
-            y = Array.trim(y, idx-1);
-            makeSelection("polygon", x, y);
-            // Array.show(x, y);
+            } while (stop != 1)
+            x2 = Array.trim(x, idx);    // Trim extra elements of the array that were created before
+            y2 = Array.trim(y, idx);
+            makeSelection("polygon", x2, y2);
+            // Array.show(x, y, x2, y2);
  
         } else if (indexOf(data[0], geometry[7]) == 0) {    // CIRCLE 
             pa = 0;
@@ -270,31 +274,24 @@ function parseALMACoord (ra, dec) {
     output = newArray(2);
     for (j=0; j<coordUnits.length; j++) if (indexOf(ra, coordUnits[j]) != -1) unitsval=j;       // read coordinate unit
     if (unitsval == 10) {   // Sexagesimal Coordinates
-        // TEMPORARY. Quick abortion of function for the polygon drawing. May be better put in another simpler and more coherent way.
-        // Temporary in here because unitsval gets assigned 10 and the last iteration in the 'while' loop enters here. It has to yoild -1.   
-        if (indexOf(ra, "corr") == 0 || indexOf(ra, "corr") == 1) {
-            output[0] = -1;
-            output[1] = -1;
-        } else {
-            // right ascension
-            par = split(ra, "hdms:"); 
-            if (par.length == 1 && indexOf(ra, ".") <= 5) {
-                par = split(ra, "."); 
-                if (par.length > 3) par[2] = par[2] + "." + par[3]; 
-            } 
-            rafin = (parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0) * 15.0;
-            // declination
-            par = split(dec, "hdms:"); 
-            if (par.length == 1 && indexOf(dec, ".") <= 5) {
-                par = split(dec,"."); 
-                if (par.length > 3) par[2] = par[2] + "." + par[3]; 
-            } 
-            if (indexOf(dec, "-") != -1) decfin = parseFloat(par[0]) - parseFloat(par[1])/60.0 - parseFloat(par[2])/3600.0;
-            else decfin = parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0;
-     
-            output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, ""); 
-            output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, ""); 
-        }
+        // right ascension
+        par = split(ra, "hdms:"); 
+        if (par.length == 1 && indexOf(ra, ".") <= 5) {
+            par = split(ra, "."); 
+            if (par.length > 3) par[2] = par[2] + "." + par[3]; 
+        } 
+        rafin = (parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0) * 15.0;
+        // declination
+        par = split(dec, "hdms:"); 
+        if (par.length == 1 && indexOf(dec, ".") <= 5) {
+            par = split(dec,"."); 
+            if (par.length > 3) par[2] = par[2] + "." + par[3]; 
+        } 
+        if (indexOf(dec, "-") != -1) decfin = parseFloat(par[0]) - parseFloat(par[1])/60.0 - parseFloat(par[2])/3600.0;
+        else decfin = parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0;
+    
+        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, ""); 
+        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, ""); 
     } else { 
         rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsval]));   // there was a parseFloat here but it deleted many decimals and got incorrect results
         decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsval])); // here too

@@ -2,7 +2,7 @@
  * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
  * A cube or image must be opened and selected before running this macro
  * 
- * "v0.1.2 - 20240410 -  pix coords to fits conversion corrected
+ * v0.1.3 - 20240411 - fix reading of polygon vertices
  *
  * Possible ROIs:
  * Point as coordinates:
@@ -29,6 +29,9 @@
  */
 
 // Global variables
+var version = "v0.1.3";
+var date = "20240411";
+var changelog = "fix reading of polygon vertices";
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 var geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
@@ -49,11 +52,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                                             // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
                                             // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
 
-            // uncomment for quick data log
-            print("New run");
-            for (j=0; j<data.length; j++) {
-                print("data[" + j + "]: '" + data[j] + "'");
-            }
+            // // uncomment for quick data log
+            // print("New run");
+            // for (j=0; j<data.length; j++) {
+            //     print("data[" + j + "]: '" + data[j] + "'");
+            // }
 
             if (indexOf(data[0], geometry[0]) == 0) {           // POINT
                 point = parseALMACoord(data[1], data[2]);
@@ -124,24 +127,26 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 rotatedRect(parseFloat(center[0]), parseFloat(center[1]), b[0]/2, b[1]/2, pa);
     
             } else if (indexOf(data[0], geometry[6]) == 0) {    // POLYGON
-                idx = 0;
+                stop = 0;
+                idx = 0;        // index to trim later
                 numb = 1;       // index from which to start to read data array
                 corr = 0.5;     // ImageJ starts counting from the top-left of each pixel. The same correction as with FITS must be applied here
                 x = newArray(round(data.length/3));
                 y = newArray(round(data.length/3));
-                do {         
-                    // print("entered data: " + idx);
+                do {
                     b = parseALMACoord(data[numb], data[numb+1]); 
                     x[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0])) + corr;
                     y[idx] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1])) + corr;
+                    if (data[numb+2] != " ") {      // stop when a double ]] appears (at the end of the vertices).
+                        stop=1;                     // ]] means there is no space afterwards, but a new keyword
+                    }
                     idx++;
                     numb = numb + 3;        // Jump to the next polygon vertex. The data object is separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]...
-                } while (b[0] != -1)
-                x2 = Array.trim(x, idx-1);   // Trim extra elements of the array that were created before
-                y2 = Array.trim(y, idx-1);
-                Array.show(x, x2);
+                } while (stop != 1)
+                x2 = Array.trim(x, idx);    // Trim extra elements of the array that were created before
+                y2 = Array.trim(y, idx);
                 makeSelection("polygon", x2, y2);
-                // Array.show(x, y);
+                // Array.show(x, y, x2, y2);
      
             } else if (indexOf(data[0], geometry[7]) == 0) {    // CIRCLE 
                 pa = 0;
@@ -191,14 +196,25 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 }
 
 macro "Import ROIs from CARTA Action Tool Options" {
-    showlog = getBoolean("Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n"
-    + "A cube or image must be opened and selected before running this macro.", 
-    'Version info', "");
-    if (showlog == true) {
-        showMessage("version log", 
-        "v0.1.2  -  20240410\n"
-        + "pix coords to fits conversion corrected");
-    }
+    // showlog = getBoolean("Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n"
+    // + "A cube or image must be opened and selected before running this macro.", 
+    // 'Version info', "");
+    // if (showlog == true) {
+    //     showMessage("version log", 
+    //     "v0.1.3  -  20240411\n"
+    //     + "fix reading of polygon vertices");
+    // }
+    showMessage("Info", "Custom made macro to convert CASA and CARTA ROIs to MADCUBA.  \n \n"
+    + "Important: A cube or image must be opened and selected before running this macro.\n \n"
+    + version + " - " + date + "\n"
+    + changelog)
+    showMessage("Info", "<html>"
+    + "<title>Page Title</title>"
+    + "Custom made macro to convert CASA and CARTA ROIs to MADCUBA. <br><br>"
+    + "Important: A cube or image must be opened and selected before running this macro. <br><br>"
+    + "<font size=-1>"
+    + version + " - " + date + " <br>"
+    + changelog);
 }
 
 /*
@@ -291,32 +307,24 @@ function parseALMACoord (ra, dec) {
     output = newArray(2);
     for (j=0; j<coordUnits.length; j++) if (indexOf(ra, coordUnits[j]) != -1) unitsval=j;       // read coordinate unit
     if (unitsval == 10) {   // Sexagesimal Coordinates
-        // TEMPORARY. Quick abortion of function for the polygon drawing. May be better put in another simpler and more coherent way.
-        // temporarily in here because unitsval gets assigned 10 and 
-        if (indexOf(ra, "corr") == 0 || indexOf(ra, "corr") == 1) {
-            output[0] = -1;
-            output[1] = -1;
-        // end temporary fix
-        } else {
-            // right ascension
-            par = split(ra, "hdms:");
-            if (par.length == 1 && indexOf(ra, ".") <= 5) {
-                par = split(ra, ".");
-                if (par.length > 3) par[2] = par[2] + "." + par[3];
-            }
-            rafin = (parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0) * 15.0;
-            // declination
-            par = split(dec, "hdms:");
-            if (par.length == 1 && indexOf(dec, ".") <= 5) {
-                par = split(dec,".");
-                if (par.length > 3) par[2] = par[2] + "." + par[3];
-            }
-            if (indexOf(dec, "-") != -1) decfin = parseFloat(par[0]) - parseFloat(par[1])/60.0 - parseFloat(par[2])/3600.0;
-            else decfin = parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0;
-
-            output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, "");
-            output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
+        // right ascension
+        par = split(ra, "hdms:");
+        if (par.length == 1 && indexOf(ra, ".") <= 5) {
+            par = split(ra, ".");
+            if (par.length > 3) par[2] = par[2] + "." + par[3];
         }
+        rafin = (parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0) * 15.0;
+        // declination
+        par = split(dec, "hdms:");
+        if (par.length == 1 && indexOf(dec, ".") <= 5) {
+            par = split(dec,".");
+            if (par.length > 3) par[2] = par[2] + "." + par[3];
+        }
+        if (indexOf(dec, "-") != -1) decfin = parseFloat(par[0]) - parseFloat(par[1])/60.0 - parseFloat(par[2])/3600.0;
+        else decfin = parseFloat(par[0]) + parseFloat(par[1])/60.0 + parseFloat(par[2])/3600.0;
+
+        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, "");
+        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
     } else {
         rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsval]));   // there was a parseFloat here but it deleted many decimals and got incorrect results
         decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsval])); // here too
