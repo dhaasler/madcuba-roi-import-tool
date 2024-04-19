@@ -29,9 +29,9 @@
  */
 
 // Global variables
-var version = "v0.1.3";
-var date = "20240411";
-var changelog = "fix reading of polygon vertices";
+var version = "v1.0.0-alpha1";
+var date = "20240419";
+var changelog = "First release version candidate";
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 var geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
@@ -48,7 +48,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                         // search where the coord system is and store it at data[1]. +30 is arbitrary, to give enough characters for every possibility
                 if (call("FITS_CARD.getStr","RADESYS") != data[1]) print("WARNING:  Coordinate system in ALMA Roi different that that in cube");
             }
-            data = split(rows[i], "][,");   // store different important data in an array. Some of these strings are preceded by a black space.
+            data = split(rows[i], "][,");   // store different important data in an array. Some of these strings are preceded by a blank space.
                                             // that is why later the 'if conditions' are not comparing data[0] () with strings, but locating the
                                             // position of the polygon string in the array data[0]. i.e data[0] is "rotbox " and not "rotbox"
 
@@ -171,6 +171,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 y1 = y_center - parseFloat(r1[1]);
                 setKeyDown("alt");
                 makeOval(x1, y1, r1[1]*2, r1[1]*2);
+                setKeyDown("none");
                 // annulus(round(center[0]), round(center[1]), round(abs(b[0])), round(abs(b[1])));    // old version
     
             } else if (indexOf(data[0], geometry[9]) == 0) {    // ELLIPSE
@@ -197,7 +198,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 
 macro "Import ROIs from CARTA Action Tool Options" {
     showMessage("Info", "<html>"
-    + "<center>Custom made macro to convert CASA and CARTA RoIs to MADCUBA.<br><br></center>"
+    + "<center>Custom made tool to convert CASA and CARTA RoIs to MADCUBA.<br><br></center>"
     + "<strong>Important</strong>: A cube or image must be opened and selected before running this macro. <br><br>"
     + "<h3>Changelog</h3>"
     + "<font size=-1>"
@@ -314,15 +315,17 @@ function parseALMACoord (ra, dec) {
         output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, "");
         output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
     } else {
-        rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsval]));   // there was a parseFloat here but it deleted many decimals and got incorrect results
-        decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsval])); // here too
+        rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsval]));
+        decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsval]));
         if (unitsval == 0 || unitsval == 1) {
             if (unitsval == 1) {
                 rafin =  rafin*180.0/PI;
                 decfin = decfin*180.0/PI;
             }
             output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, "");
+            print(decfin);
             output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
+            print(output[1]);
 
         } else if ( unitsval == 2) {
             output[0] = toString(parseFloat(rafin) + 1);      // correction to change 0,0 starting point to 1,1 starting point (currently used in madcuba)
@@ -334,6 +337,8 @@ function parseALMACoord (ra, dec) {
 
 /**
  * Convert an arc in the sky to pixels
+ * Note that this function yields a negative width value because RA increases to the left instead of to the right
+ * And this code calculates the width from left to right because MADCUBA has the origin of coordinates at the bottom-left
  *
  * @param valx  RA arc in the sky with units
  * @param valy  DEC arc in the sky with units

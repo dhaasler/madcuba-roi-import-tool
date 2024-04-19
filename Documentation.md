@@ -8,10 +8,10 @@ MADCUBA uses two forms of coordinates for images. The main coordinate system use
 
 In addition to the FITS coordinates, MADCUBA also iherits ImageJ's coordinate system. In this system, the origin is located at the upper-left corner with the 0,0 pixel. The starting point of a pixel (X.0, Y.0) lies at its upper-left corner, with the (X.5, Y.5) point in the center. This coordinate system is used in some of the RoIs that have not been manually implemented into MADCUBA, but are still available to use from the ImageJ toolset.
 
-To translate from the current pseudo-FITS to ImageJ coordinates, we must substract 1 from both the X and Y values (to effectively shift the image to a 0,0 starting point), and then the Y axis must be inverted (NAXIS2 - Y value). To convert ImageJ coordinates to FITS coordinates, the opposed operations must be applied: first an inversion of the Y axis and then the addition of 1 to the X and Y values.  
+To translate from the current pseudo-FITS to ImageJ coordinates, we must substract 1 from both the X and Y values (to effectively shift the image to a 0,0 starting point), and then the Y axis must be inverted (NAXIS2 - Y value). To convert ImageJ coordinates to FITS coordinates, the opposed operations must be applied: first an inversion of the Y axis and then the addition of 1 to the X and Y values.
 
 MADCUBA offers a plugin to convert between FITS, imageJ and celestial coordinates called `CONVERT_PIXELS_COORDINATES`. This plugin is not available through the graphical user interface (GUI), and has to be used in macros.
-Currently this plugin does not convert between pseudo-FITS and ImageJ coordinates correctly, the Y value is just getting applied the inversion operation and not the substraction. 
+Currently this plugin does not convert between pseudo-FITS and ImageJ coordinates correctly, the Y value is just getting applied the inversion operation and not the substraction.
 In addition, further work is needed to change this correction number from 1 to 0.5 to properly implement the FITS coordinate system.
 
 ## Float values in coordinates
@@ -34,7 +34,9 @@ When drawing a rectangle or moving it by hand using the Rectangle Tool, only int
 
 Macro definition for creating a rectangle in MADCUBA contains the pixel coordinates of the bottom-left corner of the rectangle followed by its width and height in number of pixels:
 
-`makeRectangle(x, y, width, height)`
+```
+makeRectangle(x, y, width, height)
+```
 
 These pixel coordinates follow the FITS standard, with the origin of the point located at the bottom-left corner (see [coordinates](#coordinate-shenanigans) section).
 
@@ -44,7 +46,7 @@ The macro recorder outputs the selected rectangle with no problems and is ready 
 
 #### Importing RoI from ImageJ macro
 
-No problems whatsoever arise when selecting a rectangle region using this function with integer values, which should be most common ocasion, as FITS files do not store information in a sub-pixel level. 
+No problems whatsoever arise when selecting a rectangle region using this function with integer values, which should be most common ocasion, as FITS files do not store information in a sub-pixel level.
 
 However some caveats should be noted when working with non-integer coordinates for this selection. This is the case for RoIs from CARTA, which are coded in celestial coordinates and are converted info a float number pixel value. To represent these rectangles MADCUBA must first do a conversion to integer values.
 
@@ -77,7 +79,9 @@ When drawing an ellipse by hand using the Ellipse Tool, both points of the major
 
 Macro definition for creating an ellipse in MADCUBA contains the coordinates of both points of the major axis followed by the aspect ratio, which is the ratio between the major and minor axes (0 <= aspectRatio <= 1):
 
-`makeEllipse(x1, y1, x2, y2, aspectRatio)`
+```
+makeEllipse(x1, y1, x2, y2, aspectRatio)
+```
 
 #### Macro recorder
 
@@ -95,7 +99,9 @@ The circle can either be created with the [Ellipse Tool](#ellipse) or the [Oval 
 
 The circle can be defined by an ellipse with an aspect ratio of 1.0.
 
-`makeEllipse(x1, y1, x2, y2, 1)`
+```
+makeEllipse(x1, y1, x2, y2, 1)
+```
 
 ### Point
 
@@ -107,9 +113,11 @@ Using the Point Tool, the selected point has sub-pixel precision, but and MADCUB
 
 Macro definition for creating a point in MADCUBA contains the pixel coordinates of the point with the Y value shited by 1:
 
-`makePoint(x, y+1)`
+```
+makePoint(x, y+1)
+```
 
-Note that in the definition we have the Y value + 1. In this function MADCUBA codes the pixel above the one that is to be selected. For example, if you want to take information from the (18,18) pixel, you need to code it as `makePoint(18,19)` for MADCUBA to select the pixel. This definition is also equivalent to using a rectangle of width and height equal to unity but correctly set in the (18,18) pixel: `makeRectangle(18,18,1,1)`. These two commands select the same pixel but have a different encoded pixel. 
+Note that in the definition we have the Y value + 1. In this function MADCUBA codes the pixel above the one that is to be selected. For example, if you want to take information from the (18,18) pixel, you need to code it as `makePoint(18,19)` for MADCUBA to select the pixel. This definition is also equivalent to using a rectangle of width and height equal to unity but correctly set in the (18,18) pixel: `makeRectangle(18,18,1,1)`. These two commands select the same pixel but have a different encoded pixel.
 
 A possible explanation for this behaviour is the incorrect FITS to ImageJ coordinate conversion. It could be that in the implementation of `makePoint`, while testing the function it was seen that a different pixel was being selected, so it was manually set to the pixel above the one that wanted to be selected. An error that "solves" an error but leaves a trail of inconsistency.
 
@@ -119,6 +127,7 @@ Another possible explanation is that the implemented `makePoint` function was ma
 
 The macro recorder of MADCUBA, however does not output a correct codification of a point.
 What the macro recorder does is output two commands:
+
 1. A `makePoint(x_imagej, y_imagej)` definition like the one above, but using ImageJ coordinates instead of FITS coordinates. This is incorrect because the `makePoint` function was implemented into MADCUBA to use FITS coordinates and this command would paint the point in a different location. It seems that the macro recorder is outputting the built-in `makePoint` function of imageJ that uses ImageJ coordinates, but that function is not accesible since MADCUBA changed the function to work with FITS coordinates when it was implemented.
 2. A `makePolygon(x, y+1)` definition using the correct FITS coordinates. This codification is incorrect because when trying to run amacro with this command, an error pops up saying that Polygons need to have at least 3 vertex.
 
@@ -145,7 +154,9 @@ The visual representation of a line is not really the same path that MADCUBA tak
 
 Macro definition for creating a line in MADCUBA contains the coordinates of the points of both ends of the line:
 
-`makeLine(x1, y1-1, x2, y2-1)`
+```
+makeLine(x1, y1-1, x2, y2-1)
+```
 
 Note that in the definition we currently have the Y values - 1. This is because the incorrect conversion between FITS and ImageJ coordinates.
 
@@ -153,7 +164,7 @@ Note that in the definition we currently have the Y values - 1. This is because 
 
 The macro recorder outputs pixel coordinates for the pixels using integer values and MADCUBA has to move these two points to the corners of pixels because in the corners is where the pixel value does not have decimals. For that, what appears to be happening is that MADCUBA extends the line to cover the entirety of the pixels in which its endpoints are situated and places then on opposite corners. MADCUBA then encodes the pixel that has its origin point (X.0, Y.0) in this corner, which usually is not the same pixel where the endpoint of the line was located. This is a very similar behaviour to that seen for the ellipse, but with the origin of a pixel on another corner.
 
-Apart from this corner issue, the Y value of the line is also misrepresented because the FITS to ImageJ coordinate conversion yields an incorrect pixel. In this implementation of the line, it gets painted on the pixel above. Most of the time this shift in coordinates gets countered by the point of origin on the pixel. Bit again, this is an error that solves another error, leaving a lot of inconsistency behind. 
+Apart from this corner issue, the Y value of the line is also misrepresented because the FITS to ImageJ coordinate conversion yields an incorrect pixel. In this implementation of the line, it gets painted on the pixel above. Most of the time this shift in coordinates gets countered by the point of origin on the pixel. Bit again, this is an error that solves another error, leaving a lot of inconsistency behind.
 This inconsistency is present when the macro recorder, because a line selected by hand via GUI will have a bad codification once exported into a macro. And when putting that codification back into another macro, the selected line is different.
 
 Different visual examples are presented in **Fig. X**. As can be seen in this figure, only in one case the encoded pixel matches the pixel where the point was located. When the other points get extended to a corner, that corner belongs to another pixel and that other pixel is the one getting encoded.
@@ -177,7 +188,9 @@ When drawing a polygon by hand using the implemented Polygon Tool, only integer 
 
 Macro definition for creating a polygon in MADCUBA contains the coordinates of the pixel whose lower-left corner gets touched by the polygon line:
 
-`makePolygon(x1, y1, x2, y2, x3, y3, ..., xn, yn)`
+```
+makePolygon(x1, y1, x2, y2, x3, y3, ..., xn, yn)
+```
 
 > Note that the pixels in the codification are not all inside the polygon. It is just that the origin point (lower-left corner) of that pixel gets touched by the polygon delimiting line. **Fig. X** shows an example where the pixels from the top and right sides of the polygon are coded but not inside the polygon.
 
@@ -190,8 +203,6 @@ The macro recorder outputs the selected polygon with no problems and is ready to
 Once a polygon has been imported into madcuba through a macro, each pixel has a vertex in the polygon shape. Each one of these vertices can be moved into another pixel without sub-pixel precision.
 
 When importing a polygon shape with non-integer coordinates for the vertices, each one of these points gets rounded to the nearest integer value before selecting the polygon.
-
-
 
 ## ImageJ RoIs
 
@@ -211,7 +222,9 @@ This tool only lets users select the corners of pixels without a sub-pixel preci
 
 Macro definition for creating an oval in MADCUBA is the same as for a rectangle of the same size. It contains the pixel coordinates of the bottom-left corner of the rectangle in which the oval is set followed by its width and height in number of pixels:
 
-`makeOval(x, y, width, height)`
+```
+makeOval(x, y, width, height)
+```
 
 #### Macro recorder
 
@@ -223,7 +236,7 @@ This region can be imported into madcuba using both integer and float values for
 
 ### Selection: Polygon
 
-Not to be confused with the Polygon Tool from MADCUBA. Using the built-in `selection` function a polygon can also be selected. The main difference is that with this tool the polygon can have float values for its vertices in the painted polygon, however the real selection that MADCUBA does at the end will always have a precision of one pixel when extracting information. 
+Not to be confused with the Polygon Tool from MADCUBA. Using the built-in `selection` function a polygon can also be selected. The main difference is that with this tool the polygon can have float values for its vertices in the painted polygon, however the real selection that MADCUBA does at the end will always have a precision of one pixel when extracting information.
 This RoI uses the imageJ coordinate system, so a conversion must first be applied because MADCUBA works with FITS coordinates. This can be easily done with the `CONVERT_PIXELS_COORDINATES` plugin of MADCUBA.
 How MADCUBA selects the pixels for the final selection before the extraction of information is not currently documented.
 
@@ -235,7 +248,9 @@ This selection cannot be created using GUI elements and has to be coded and impo
 
 The polygon selection is coded by the keyword "polygon", and two arrays containing the X and Y values for every point that conforms the polygon:
 
-`makeSelection("polygon", Xvalues, Yvalues)`
+```
+makeSelection("polygon", Xvalues, Yvalues)
+```
 
 While the Polygon Tool of MADCUBA uses integer values of pixels to paint the region, this Polygon selection from ImageJ accepts float numbers and its vertices can be manually moved into sub-pixel locations. Even though the visual representation of a Polygon selection using this Selection Tool accepts float values, it is important to note that MADCUBA does not, and the final selection that MADCUBA processes only takes the totality of a pixel.
 
@@ -249,33 +264,41 @@ ImageJ offers a `selection` function that accepts different input parameters. An
 
 The polyline selection is coded by the keyword "polyline", and two arrays containing the X and Y values for every point that conforms the polyline:
 
-`makeSelection("polyline", Xvalues, Yvalues)`
-
-
-
-
-
+```
+makeSelection("polyline", Xvalues, Yvalues)
+```
 
 ### CARTA RoIs
 
 RoIs selected from CARTA (and CASA) can be imported into MADCUBA using the newly developed Import RoIs from CARTA Tool. This plugin can be installed as a macro or as a tool following the instructions detailed [here](#plugin-installation).
 
+### Box and CenterBox
+
+> In carta boxes are coded as center boxes (Xcenter, Ycenter, width, height). In casa **I THINK** they are coded with the bottom left and upper right corner instead (x1, y1, x2, y2).
+
+### Line
+
+This RoI in CARTA works, but in CASA it exports a blank file without a line codification.
+
+### Ellipse
+
+> The ellipse in carta is coded as (centerx, centery, Ysize, Xsize, rotation of the Ysize axis (counterclockwise)). Un such a way that (4,4,3,1,90) equals (4,4,1,3,0)
+
 ### Rotated rectangle
 
 A rotated rectangle from CARTA is imported into MADCUBA as a polygon selection from ImageJ. It is coded by two arrays containing the X and Y values for every point that conforms the polygon:
 
-`makeSelection("polygon", Xvalues, Yvalues)`
+```
+makeSelection("polygon", Xvalues, Yvalues)
+```
+
+### Polyline
+
+This RoI works well in CARTA, but CASA saves this region ina file coded as a polugon ('poly') and is not usable as a polyline.
 
 ### Annulus
 
-The annulus is a RoI that has not been implemented as a tool in MADCUBA nor in ImageJ. Altough its shape can be obtained using the Oval tool from ImageJ by using the `alt` key modifier and substracting an oval selection from a larger oval selection.
-
-
-
-
-
-
-
+The annulus is a RoI that has not been implemented as a tool in MADCUBA nor in ImageJ. Altough its shape can be obtained using the Oval tool from ImageJ by using the `alt` key modifier and substracting an oval selection from a larger oval selection. This RoI accepts float values when painting the region.
 
 # MADCUBA cheat-sheet
 
@@ -295,9 +318,11 @@ Using the `ctrl` key an alternative option is enabled for creating shapes. For t
 
 A macro file (.ijm) can contain more than one macro. To do that, each macro has to be wrapped in a macro command.
 
-    macro "Macro name" {
-        ...macro code...
-    }
+```
+macro "Macro name" {
+    ...macro code...
+}
+```
 
 Macros in a macro file can use global variables to communicate with each other.
 
@@ -315,14 +340,19 @@ Macros can also be installed as tools to have them appear on the Toolset of imag
 
 The first type of tool is the Image Tool. These tools perform an action when clicking the image when said tool is selected on the Toolbar (e.g the Rectangle tool). Its macro name must end with "Tool - xxxxx", where xxxxx defines the icon for the tool. Documentation about the icon is available [here](https://imagej.net/ij/developer/macro/macros.html#icons).
 
-    macro "Sample Tool - xxxxx {
-        ...macro code...
-    }
+```
+macro "Sample Tool - xxxxx {
+    ...macro code...
+}
+```
 
 Another type of Tool is the Action Tool, which perform an action when you click on their icon in the toolbar. The macro name must end with "Action Tool - xxxxx".
 
-    macro "Sample Action Tool - xxxxx {
-        ...macro code...
-    }
+```
+macro "Sample Action Tool - xxxxx {
+    ...macro code...
+}
+```
 
-To install a Macro Tool select Plugins > Install... in the ImageJ window and select a macro file that contains a macro tool. After that, the Tool will be available in the Toolbar of the ImageJ window. This Tool will not disappear when closing MADCUBA.
+To install a Macro Tool select Plugins > Install... in the ImageJ window and select a macro file  with a name ending in "_Tool.ijm" and also contains a macro tool. After that, the Tool will be available in the Toolbar of the ImageJ window. This Tool will not disappear when closing MADCUBA.  
+What ImageJ doest when the user installs a tool this way, is create a copy of the .ijm file in the MADCUBA_IJ/plugins/Tools folder and renames the file into the name that appears inside the `macro` keyword with blank spaces changed to underscores. For example, a Tool named "Create Circle Action Tool - C000O3388" would be placed in this folder as `Create_Circle_Action_Tool.ijm`.

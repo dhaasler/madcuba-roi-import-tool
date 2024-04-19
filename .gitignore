@@ -1,12 +1,7 @@
 ## My ignored files
 
 # Testing images
-*/test.image/
-*/7m.fits
-*/integrated_PN_6-5_TM1.fits
-*/MAD_CUB_member.uid___A001_X133d_X321b.IRAS_16293-2422_sci.spw20.cube.I.pbcor.fits
-*/MAD_CUB_GUAPOSspec7spw31_DEEPpart3_vF*
-*/GUAPOSspec7spw31_DEEPpart3_vF*
+images/
 
 # File extensions
 *.eps
