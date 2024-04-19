@@ -1,8 +1,6 @@
 /* 
  * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
  * A cube or image must be opened and selected before running this macro
- * 
- * v0.1.3 - 20240411 - fix reading of polygon vertices
  *
  * Possible ROIs:
  * Point as coordinates:
