@@ -26,10 +26,11 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-// Global variables
-var version = "v1.0.0-alpha1";
-var date = "20240419";
+var version = "v1.0.0-alpha2";
+var date = "20240422";
 var changelog = "First release version candidate";
+
+// Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
 var geometry = newArray ("symbol", "line", "polyline", "box", "centerbox", "rotbox", "poly", "circle", "annulus", "ellipse"); 
 
@@ -196,7 +197,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 
 macro "Import ROIs from CARTA Action Tool Options" {
     showMessage("Info", "<html>"
-    + "<center>Custom made tool to convert CASA and CARTA RoIs to MADCUBA.<br><br></center>"
+    + "<center><h2>ROI Import Tool</h2></center>"
+    + "Custom made tool to convert CASA and CARTA RoIs to MADCUBA.<br><br>"
     + "<strong>Important</strong>: A cube or image must be opened and selected before running this macro. <br><br>"
     + "<h3>Changelog</h3>"
     + "<font size=-1>"
