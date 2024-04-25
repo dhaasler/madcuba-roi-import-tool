@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.0.0-alpha2";
-var date = "20240422";
-var changelog = "First release version candidate";
+var version = "v1.0.1";
+var date = "20240425";
+var changelog = "Fix polyline reading error";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
@@ -94,7 +94,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             
             /* POLYLINE (almost the same as polygon) */
             } else if (indexOf(data[0], geometry[2]) == 0) {
-                idx = 0;    // index to trim later
+                stop = 0;
+                idx = 0;    // index of points
                 numb = 1;   // index from which to start reading data array
                 /* ImageJ starts counting from the top-left of each pixel. 
                 The same correction as with FITS must be applied here */
@@ -111,11 +112,17 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                         parseFloat(call(
                             "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]))
                         + corr;
+                    /* stop when a double ]] appears in the roi file (at the end
+                    of the vertices). In the roi file when ]] appears, the next
+                    item is not a blank space, but a new keyword */
+                    if (data[numb+2] != " ") {
+                        stop=1;
+                    }
                     idx++;
                     /* Jump to the next polygon vertex. The data object is 
-                    separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]... */
+                    separated: ...[Xn], [Yn], [ ], [Xn+1], [Yn+1], [ ]... */
                     numb = numb + 3;
-                } while (b[0] != -1)
+                } while (stop != 1)
                 /* trim extra elements of the array that were created before */
                 x = Array.trim(x, idx-1);
                 y = Array.trim(y, idx-1);
@@ -164,7 +171,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             /* POLYGON */
             } else if (indexOf(data[0], geometry[6]) == 0) {
                 stop = 0;
-                idx = 0;    // index to trim later
+                idx = 0;    // index of points
                 numb = 1;   // index from which to start reading data array
                 /* ImageJ starts counting from the top-left of each pixel. 
                 The same correction as with FITS must be applied here */
@@ -233,13 +240,14 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 corr = 0.5;
                 xCenter = parseFloat(center[0]) + corr;
                 yCenter = parseFloat(center[1]) + corr;
-                /* for an ellipse the first is y_width */
+                /* For an ellipse the first axis in the code is the Yaxis.
+                 * Lets change the order to have Xaxis first and then Yaxis. */
                 axes = parseALMAxy(data[5], data[4]);
                 /* Set the major axis and convert the position angle if needed.
                 In 'toEllipse' the position angle is that of the major axis, but
                 in CARTA it is the angle of the Y-axis. The position angle must
-                be transformed to the angle of the biggest axis in madcuba.
-                Which is simply moving it 90 degrees if the Y axis was the */
+                be transformed to the angle of the biggest axis. Which is simply
+                rotating it 90 degrees if the Xaxis is the major axis */
                 if (abs(axes[0]) > abs(axes[1])) {
                     bmaj = axes[0];
                     bmin = axes[1];
@@ -330,10 +338,10 @@ function rotatedRect(x, y, halfWidth, halfHeight, angle) {
  * @param pa  Position Angle of the major axis in a counterclockwise direction
  */
 function toEllipse(x, y, bmaj, bmin, pa) {
-    x1 = x + bmaj*sin(pa);
-    y1 = y - bmaj*cos(pa);
-    x2 = x - bmaj*sin(pa);
-    y2 = y + bmaj*cos(pa);
+    x1 = x - bmaj*sin(pa);
+    y1 = y + bmaj*cos(pa);
+    x2 = x + bmaj*sin(pa);
+    y2 = y - bmaj*cos(pa);
     e = bmin/bmaj;
     makeEllipse(x1, y1, x2, y2, e);
 }
