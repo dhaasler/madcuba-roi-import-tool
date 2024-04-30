@@ -1,6 +1,6 @@
 # MADCUBA ROI Import Tool
 
-[![GitHub Release](https://img.shields.io/github/v/release/dhaasler/madcuba-roi-import-tool)](https://github.com/dhaasler/madcuba-annulus-tool/releases/tag/1.0.1)
+[![GitHub Release](https://img.shields.io/github/v/release/dhaasler/madcuba-roi-import-tool )](https://github.com/dhaasler/madcuba-roi-import-tool/releases/tag/v1.0.1)
 [![Static Badge](https://img.shields.io/badge/changelog-brightgreen)](CHANGELOG.md)
 
 MADCUBA tool for importing CARTA and CASA regions of interest (ROIs). [MADCUBA](https://cab.inta-csic.es/madcuba/) is a software developed in the spanish Center of Astrobiology (CSIC-INTA) to analyze astronomical datacubes, and is built using the ImageJ infrastructure. This tool will not work with any other ImageJ program.
