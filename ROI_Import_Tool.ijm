@@ -152,12 +152,14 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 /* + because RA increases to the left and madcuba uses the
                 lower left corner */
                 x1 = x_center + parseFloat(widths[0]/2);
-                y1 = y_center - parseFloat(widths[1]/2);
+                y1 = y_center - parseFloat(-widths[1]/2);
                 /* - because parseALMAxy calculated a positive width to the left
-                and madcuba needs a width to the right for the rectangle */
+                (used CDELT1 which is negative) and madcuba needs a width to the
+                right for the rectangle */
                 x_width = -parseFloat(widths[0]);
-                y_width = parseFloat(widths[1]);
+                y_width = -parseFloat(widths[1]);
                 /* MADCUBA does the rounding when working with makeRectangle */
+                print("before making rectangle: " + x1 + " " + y1 + " " + x_width + " " + y_width);
                 makeRectangle(x1, y1, x_width, y_width);
     
             /* ROTATED BOX */
