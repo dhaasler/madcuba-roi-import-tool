@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.0.1";
-var date = "20240425";
-var changelog = "Fix polyline reading error";
+var version = "v1.0.2";
+var date = "20240527";
+var changelog = "Change arc calculation function to have only one parameter";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
