@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.0.2";
+var version = "v1.0.3";
 var date = "20240527";
-var changelog = "Change arc calculation function to have only one parameter";
+var changelog = "Fix polyline not showing last vertex.";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
@@ -124,9 +124,10 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                     numb = numb + 3;
                 } while (stop != 1)
                 /* trim extra elements of the array that were created before */
-                x = Array.trim(x, idx-1);
-                y = Array.trim(y, idx-1);
+                x = Array.trim(x, idx);
+                y = Array.trim(y, idx);
                 makeSelection("polyline", x, y);
+                Array.show(x, y);
     
             /* BOX (CASA) */
             } else if (indexOf(data[0], geometry[3]) == 0) {
