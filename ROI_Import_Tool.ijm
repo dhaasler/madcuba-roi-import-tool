@@ -11,7 +11,7 @@
  *     polyline [[x1, y1], [x2, y2], [x3, y3], ...] 
  * Rectangular box; the two coordinates are two opposite corners:
  *     box [[x1, y1], [x2, y2]]
- * Center box; [x, y] define the cemnter point of the box and [x_width, y_width]
+ * Center box; [x, y] define the center point of the box and [x_width, y_width]
  *     the width of the sides:
  *     centerbox [[x, y], [x_width, y_width]]
  * Rotated box; [x, y] define the center point of the box; [x_width, y_width]
@@ -247,7 +247,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 In 'toEllipse' the position angle is that of the major axis, but
                 in CARTA it is the angle of the Y-axis. The position angle must
                 be transformed to the angle of the biggest axis. Which is simply
-                rotating it 90 degrees if the Xaxis is the major axis */
+                rotating it 90 degrees if the X-axis is the major axis */
                 if (abs(axes[0]) > abs(axes[1])) {
                     bmaj = axes[0];
                     bmin = axes[1];
