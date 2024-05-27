@@ -64,11 +64,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
             data = split(rows[i], "][,");
 
-            // /* uncomment for quick data log */
-            // print("New run");
-            // for (j=0; j<data.length; j++) {
-            //     print("data[" + j + "]: '" + data[j] + "'");
-            // }
+            /* uncomment for quick data log */
+            print("New run");
+            for (j=0; j<data.length; j++) {
+                print("data[" + j + "]: '" + data[j] + "'");
+            }
 
             /* POINT */
             if (indexOf(data[0], geometry[0]) == 0) {
@@ -148,27 +148,23 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 corr = 0.5; // correct MADCUBAs wrong FITS coordinates
                 x_center = parseFloat(center[0]) + corr;
                 y_center = parseFloat(center[1]) + corr;
-                widths = parseALMAxy(data[4], data[5]);
-                /* + because RA increases to the left and madcuba uses the
-                lower left corner */
-                x1 = x_center + parseFloat(widths[0]/2);
-                y1 = y_center - parseFloat(-widths[1]/2);
-                /* - because parseALMAxy calculated a positive width to the left
-                (used CDELT1 which is negative) and madcuba needs a width to the
-                right for the rectangle */
-                x_width = -parseFloat(widths[0]);
-                y_width = -parseFloat(widths[1]);
+                width = parseALMAarc(data[4]);
+                height = parseALMAarc(data[5]);
+                x1 = x_center - parseFloat(width/2);
+                y1 = y_center - parseFloat(height/2);
+                x_width = parseFloat(width);
+                y_width = parseFloat(height);
                 /* MADCUBA does the rounding when working with makeRectangle */
-                print("before making rectangle: " + x1 + " " + y1 + " " + x_width + " " + y_width);
                 makeRectangle(x1, y1, x_width, y_width);
     
             /* ROTATED BOX */
             } else if (indexOf(data[0], geometry[5]) == 0) {
                 pa = parseALMAangle(data[6]);
                 center = parseALMACoord(data[1], data[2]);
-                b = parseALMAxy(data[4], data[5]);
+                b1 = parseALMAarc(data[4]);
+                b2 = parseALMAarc(data[5]);
                 rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
-                            b[0]/2, b[1]/2, pa);
+                            b1/2, b2/2, pa);
     
             /* POLYGON */
             } else if (indexOf(data[0], geometry[6]) == 0) {
@@ -214,9 +210,9 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 corr = 0.5;
                 xCenter = parseFloat(center[0]) + corr;
                 yCenter = parseFloat(center[1]) + corr;
-                radius = parseALMAxy(data[3], data[3]);
-                toEllipse(xCenter, yCenter, parseFloat(abs(radius[0])),
-                          parseFloat(abs(radius[1])), pa);
+                radius = parseALMAarc(data[3]);
+                toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
+                          parseFloat(abs(radius)), pa);
              
             /* ANNULUS */
             } else if (indexOf(data[0], geometry[8]) == 0) {
@@ -224,15 +220,15 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 corr = 0.5;
                 xCenter = parseFloat(center[0]) + corr;
                 yCenter = parseFloat(center[1]) + corr;
-                r1 = parseALMAxy(data[3], data[3]);
-                r2 = parseALMAxy(data[4], data[4]);
-                x2 = xCenter - parseFloat(r2[1]);   // outer circle
-                y2 = yCenter - parseFloat(r2[1]);
-                makeOval(x2, y2, r2[1]*2, r2[1]*2);
-                x1 = xCenter - parseFloat(r1[1]);   // inner circle
-                y1 = yCenter - parseFloat(r1[1]);
+                r1 = parseALMAarc(data[3]);
+                r2 = parseALMAarc(data[4]);
+                x2 = xCenter - parseFloat(r2);   // outer circle
+                y2 = yCenter - parseFloat(r2);
+                makeOval(x2, y2, r2*2, r2*2);
+                x1 = xCenter - parseFloat(r1);   // inner circle
+                y1 = yCenter - parseFloat(r1);
                 setKeyDown("alt");
-                makeOval(x1, y1, r1[1]*2, r1[1]*2);
+                makeOval(x1, y1, r1*2, r1*2);
                 setKeyDown("none");
     
             /* ELLIPSE */
@@ -244,19 +240,20 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 yCenter = parseFloat(center[1]) + corr;
                 /* For an ellipse the first axis in the code is the Yaxis.
                  * Lets change the order to have Xaxis first and then Yaxis. */
-                axes = parseALMAxy(data[5], data[4]);
+                ax_y = parseALMAarc(data[4]);
+                ax_x = parseALMAarc(data[5]);
                 /* Set the major axis and convert the position angle if needed.
                 In 'toEllipse' the position angle is that of the major axis, but
                 in CARTA it is the angle of the Y-axis. The position angle must
                 be transformed to the angle of the biggest axis. Which is simply
                 rotating it 90 degrees if the X-axis is the major axis */
-                if (abs(axes[0]) > abs(axes[1])) {
-                    bmaj = axes[0];
-                    bmin = axes[1];
+                if (abs(ax_x) > abs(ax_y)) {
+                    bmaj = ax_x;
+                    bmin = ax_y;
                     pa = pa-PI/2;
                 } else {
-                    bmaj = axes[1];
-                    bmin = axes[0];
+                    bmaj = ax_y;
+                    bmin = ax_x;
                 }
                 toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
                           parseFloat(abs(bmin)), pa);
@@ -432,44 +429,29 @@ function parseALMACoord (ra, dec) {
 }
 
 /**
- * Convert an arc in the sky to pixels
- * Note that this function yields a negative width value because RA
- * increases to the left instead of to the right, and this code
- * calculates the width from left to right because MADCUBA has the
- * origin of coordinates at the bottom-left
+ * Convert arcs in the sky to pixels
+ * Note that this function uses the CDELT2 header parameter. This will
+ * not be accurate for non-linear projections where CDELT1 != CDELT2.
  *
- * @param valx  RA arc in the sky with units
- * @param valy  DEC arc in the sky with units
+ * @param val  arc in the sky with units
  * @return  Converted arc
  */
-function parseALMAxy (valx,valy) {
-    cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT1"));
+function parseALMAarc (val) {
+    cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
     coordUnits = newArray("deg", "rad", "arcmin", "arcsec", "pix");
     unitsval = -1;
-    coord = newArray(2);
-    coord[0] = -1;
-    coord[1] = -1;
+    coord = -1;
 
     for (j=0; j<coordUnits.length; j++)
-        if (indexOf(valx, coordUnits[j]) != -1) unitsval=j; // read units
+        if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
     // case of request without units to use with polygon
     if (unitsval == -1) return coord;
 
-    value = parseFloat(substring(valx, 0, indexOf(valx, coordUnits[unitsval])));
-    if      (unitsval == 0) coord[0] = value / cdelt;
-    else if (unitsval == 1) coord[0] = (value*180.0/PI) / cdelt;
-    else if (unitsval == 2) coord[0] = (value/60.0) / cdelt;
-    else if (unitsval == 3) coord[0] = (value/3600.0) / cdelt;
-    else if (unitsval == 4) coord[0] = value;
-
-    for (j=0; j<coordUnits.length; j++)
-        if (indexOf(valy, coordUnits[j]) != -1) unitsval=j; // read units
-    value = parseFloat(substring(valy, 0, indexOf(valy, coordUnits[unitsval])));
-    if      (unitsval == 0) coord[1] = value / cdelt;
-    else if (unitsval == 1) coord[1] = (value*180.0/PI) / cdelt;
-    else if (unitsval == 2) coord[1] = (value/60.0) / cdelt;
-    else if (unitsval == 3) coord[1] = (value/3600.0) / cdelt;
-    else if (unitsval == 4)
-        coord[1] = value;
+    value = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
+    if      (unitsval == 0) coord = value / cdelt;
+    else if (unitsval == 1) coord = (value*180.0/PI) / cdelt;
+    else if (unitsval == 2) coord = (value/60.0) / cdelt;
+    else if (unitsval == 3) coord = (value/3600.0) / cdelt;
+    else if (unitsval == 4) coord = value;
     return coord;
 }
