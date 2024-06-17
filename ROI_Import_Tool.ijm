@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.0.3";
-var date = "20240527";
-var changelog = "Fix polyline not showing last vertex.";
+var version = "v1.1";
+var date = "20240617";
+var changelog = "Update to MADCUBA v11.";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
@@ -73,21 +73,19 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             /* POINT */
             if (indexOf(data[0], geometry[0]) == 0) {
                 point = parseALMACoord(data[1], data[2]);
-                corr = 0.5; // correct MADCUBAs wrong FITS coordinates
-                x = parseFloat(point[0]) + corr;
-                y = parseFloat(point[1]) + corr;
+                x = parseFloat(point[0]);
+                y = parseFloat(point[1]);
                 makePoint(x, y);
                 // print("painted: " + x + ", " + y);
             
             /* LINE */
             } else if (indexOf(data[0], geometry[1]) == 0) {
                 point1 = parseALMACoord(data[1], data[2]);
-                corr = 0.5; // correct MADCUBAs wrong FITS coordinates
-                x1 = parseFloat(point1[0]) + corr;
-                y1 = parseFloat(point1[1]) + corr - 1;
+                x1 = parseFloat(point1[0]);
+                y1 = parseFloat(point1[1]);
                 point2 = parseALMACoord(data[4], data[5]);
-                x2 = parseFloat(point2[0]) + corr;
-                y2 = parseFloat(point2[1]) + corr - 1;
+                x2 = parseFloat(point2[0]);
+                y2 = parseFloat(point2[1]);
                 makeLine(x1, y1, x2, y2);
                 // print("from: " + x1 + ", " + y1);
                 // print("to: " + x2 + ", " + y2);
@@ -97,23 +95,18 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 stop = 0;
                 idx = 0;    // index of points
                 numb = 1;   // index from which to start reading data array
-                /* ImageJ starts counting from the top-left of each pixel. 
-                The same correction as with FITS must be applied here */
-                corr = 0.5;
                 x = newArray(round(data.length/3));
                 y = newArray(round(data.length/3));
                 do {         
                     b = parseALMACoord(data[numb], data[numb+1]); 
                     x[idx] = 
                         parseFloat(call(
-                            "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]))
-                        + corr;
+                            "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
                     y[idx] = 
                         parseFloat(call(
-                            "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]))
-                        + corr;
-                    /* stop when a double ]] appears in the roi file (at the end
-                    of the vertices). In the roi file when ]] appears, the next
+                            "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+                    /* stop when a double ]] appears in the ROI file (at the end
+                    of the vertices). In the ROI file when ]] appears, the next
                     item is not a blank space, but a new keyword */
                     if (data[numb+2] != " ") {
                         stop=1;
@@ -133,11 +126,10 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             } else if (indexOf(data[0], geometry[3]) == 0) {
                 corner1 = parseALMACoord(data[1], data[2]);
                 corner2 = parseALMACoord(data[4], data[5]);
-                corr = 0.5; // correct MADCUBAs wrong FITS coordinates
-                x1 = parseFloat(corner1[0]) + corr;
-                y1 = parseFloat(corner1[1]) + corr;
-                x2 = parseFloat(corner2[0]) + corr;
-                y2 = parseFloat(corner2[1]) + corr;
+                x1 = parseFloat(corner1[0]);
+                y1 = parseFloat(corner1[1]);
+                x2 = parseFloat(corner2[0]);
+                y2 = parseFloat(corner2[1]);
                 x_width = x2 - x1;
                 y_width = y2 - y1;
                 /* MADCUBA does the rounding when working with makeRectangle */
@@ -146,9 +138,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             /* CENTER BOX (CARTA) */
             } else if (indexOf(data[0], geometry[4]) == 0) {
                 center = parseALMACoord(data[1], data[2]);
-                corr = 0.5; // correct MADCUBAs wrong FITS coordinates
-                x_center = parseFloat(center[0]) + corr;
-                y_center = parseFloat(center[1]) + corr;
+                x_center = parseFloat(center[0]);
+                y_center = parseFloat(center[1]);
                 width = parseALMAarc(data[4]);
                 height = parseALMAarc(data[5]);
                 x1 = x_center - parseFloat(width/2);
@@ -172,23 +163,18 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                 stop = 0;
                 idx = 0;    // index of points
                 numb = 1;   // index from which to start reading data array
-                /* ImageJ starts counting from the top-left of each pixel. 
-                The same correction as with FITS must be applied here */
-                corr = 0.5;
                 x = newArray(round(data.length/3));
                 y = newArray(round(data.length/3));
                 do {
                     b = parseALMACoord(data[numb], data[numb+1]); 
                     x[idx] = 
                         parseFloat(call(
-                            "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]))
-                        + corr;
+                            "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
                     y[idx] = 
                         parseFloat(call(
-                            "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]))
-                        + corr;
-                    /* stop when a double ]] appears in the roi file (at the end
-                    of the vertices). In the roi file when ]] appears it has no
+                            "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+                    /* stop when a double ]] appears in the ROI file (at the end
+                    of the vertices). In the ROI file when ]] appears it has no
                     space afterwards, but a new keyword */
                     if (data[numb+2] != " ") {
                         stop=1;
@@ -208,9 +194,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             } else if (indexOf(data[0], geometry[7]) == 0) {
                 pa = 0;
                 center = parseALMACoord(data[1], data[2] );
-                corr = 0.5;
-                xCenter = parseFloat(center[0]) + corr;
-                yCenter = parseFloat(center[1]) + corr;
+                xCenter = parseFloat(center[0]);
+                yCenter = parseFloat(center[1]);
                 radius = parseALMAarc(data[3]);
                 toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
                           parseFloat(abs(radius)), pa);
@@ -218,9 +203,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             /* ANNULUS */
             } else if (indexOf(data[0], geometry[8]) == 0) {
                 center = parseALMACoord(data[1], data[2]);
-                corr = 0.5;
-                xCenter = parseFloat(center[0]) + corr;
-                yCenter = parseFloat(center[1]) + corr;
+                xCenter = parseFloat(center[0]);
+                yCenter = parseFloat(center[1]);
                 r1 = parseALMAarc(data[3]);
                 r2 = parseALMAarc(data[4]);
                 x2 = xCenter - parseFloat(r2);   // outer circle
@@ -236,9 +220,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             } else if (indexOf(data[0], geometry[9]) == 0) {
                 pa = parseALMAangle(data[6]);
                 center = parseALMACoord(data[1], data[2]);
-                corr = 0.5;
-                xCenter = parseFloat(center[0]) + corr;
-                yCenter = parseFloat(center[1]) + corr;
+                xCenter = parseFloat(center[0]);
+                yCenter = parseFloat(center[1]);
                 /* For an ellipse the first axis in the code is the Yaxis.
                  * Lets change the order to have Xaxis first and then Yaxis. */
                 ax_y = parseALMAarc(data[4]);
@@ -267,7 +250,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
 macro "Import ROIs from CARTA Action Tool Options" {
     showMessage("Info", "<html>"
     + "<center><h2>ROI Import Tool</h2></center>"
-    + "Custom made tool to convert CASA and CARTA RoIs to MADCUBA.<br><br>"
+    + "Custom made tool to convert CASA and CARTA ROIs to MADCUBA.<br><br>"
     + "<strong>Important</strong>: A cube or image must be opened and selected "
     + "before running this macro. <br><br>"
     + "<h3>Changelog</h3>"
@@ -303,26 +286,15 @@ function rotatedRect(x, y, halfWidth, halfHeight, angle) {
     r1y = -halfWidth * s + halfHeight * c;
     r2x =  halfWidth * c - halfHeight * s;
     r2y =  halfWidth * s + halfHeight * c;
-    /* ImageJ starts counting from the top-left of each pixel. The same 
-    correction as with FITS must be applied here */
-    corr = 0.5;
     // Returns four points in clockwise order starting from the top left.
-    x1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r1x))
-            + corr;
-    x1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r2x))
-            + corr;
-    x1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r1x))
-            + corr;
-    x1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r2x))
-            + corr;
-    y1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r1y))
-            + corr;
-    y1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r2y))
-            + corr;
-    y1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r1y))
-            + corr;
-    y1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r2y))
-            + corr;
+    x1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r1x));
+    x1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r2x));
+    x1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r1x));
+    x1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r2x));
+    y1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r1y));
+    y1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r2y));
+    y1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r1y));
+    y1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r2y));
     makeSelection("polygon", x1, y1);
     // Array.show(x1, y1);
 }
