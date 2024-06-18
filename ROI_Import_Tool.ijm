@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.1";
-var date = "20240617";
-var changelog = "Update to MADCUBA v11.";
+var version = "v1.1.1";
+var date = "20240618";
+var changelog = "Fix read error with no crtf visual parameters";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
@@ -49,11 +49,10 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
     for (i=0; i<rows.length; i++) {             // iterate through csv list
         if (startsWith(rows[i],"#") == 0) {     // skip first line
             if (indexOf(rows[i], "coord=") != -1) {
-                /* search the coord system string and store it at data[1]. 
-                +30 is arbitrary, enough characters for every possibility */
-                data = split(substring(rows[i], indexOf(rows[i], "coord="), 
-                                       indexOf(rows[i], "coord=")+30), "=,");
-                if (call("FITS_CARD.getStr","RADESYS") != data[1]) 
+                /* search the coord system string and store it */
+                coordSystem = split(substring(rows[i], indexOf(rows[i],
+                                              "coord=")), "=,");
+                if (call("FITS_CARD.getStr","RADESYS") != coordSystem[1]) 
                     print("WARNING:  Coordinate system in ALMA Roi different "
                           + "than that in cube");
             }
@@ -64,11 +63,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
             the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
             data = split(rows[i], "][,");
 
-            /* uncomment for quick data log */
-            print("New run");
-            for (j=0; j<data.length; j++) {
-                print("data[" + j + "]: '" + data[j] + "'");
-            }
+            // /* uncomment for quick data log */
+            // print("New run");
+            // for (j=0; j<data.length; j++) {
+            //     print("data[" + j + "]: '" + data[j] + "'");
+            // }
 
             /* POINT */
             if (indexOf(data[0], geometry[0]) == 0) {
@@ -184,7 +183,8 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608A T5608L T8608M Tf608A T2f
                     separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]... */
                     numb = numb + 3;
                 } while (stop != 1)
-                /* trim extra elements of the array that were created before */
+                /* trim extra elements of the array that were created before if
+                the crtf file has more parameters at the end */
                 x2 = Array.trim(x, idx);
                 y2 = Array.trim(y, idx);
                 makeSelection("polygon", x2, y2);
