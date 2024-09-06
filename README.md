@@ -25,4 +25,6 @@ The tool will then appear in the ImageJ Toolbar ready to be used.
 
 ## How to use
 
-Click on the tool icon in the toolbar and a window will appear asking the user to select the ROI file from CARTA or CASA. The tool will automatically convert the ROI and create the selection in MADCUBA.
+> A cube or map must opened and its window selected before running this macro.
+
+Click on the tool icon in the toolbar and a window will appear asking the user to select the .crtf file from CARTA or CASA. The tool will automatically convert the ROI and create the selection in MADCUBA.
