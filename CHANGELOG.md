@@ -2,6 +2,7 @@
 
 | Version       | Date       | Info                                             | Details |
 | ------------- | ---------- | ------------------------------------------------ | ------- |
+| v1.2.0        | 2024-09-30 | Add support for DS9 ROIs                         |         |
 | v1.1.1        | 2024-06-18 | Fix read error in crtf without visual parameters |         |
 | v1.1.0        | 2024-06-17 | Update to MADCUBA v11                            |         |
 | v1.0.3        | 2024-05-27 | Fix polyline not showing last vertex             |         |
