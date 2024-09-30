@@ -82,14 +82,15 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f
         the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
         data = split(rows[3], ")(,");
 
-        /* uncomment for quick data log */
-        print("New run");
-        print(coordUnitSystem);
-        for (j=0; j<data.length; j++) {
-            print("data[" + j + "]: '" + data[j] + "'");
-        }
+        // /* uncomment for quick data log */
+        // print("New run");
+        // print(coordUnitSystem);
+        // for (j=0; j<data.length; j++) {
+        //     print("data[" + j + "]: '" + data[j] + "'");
+        // }
+
         importDs9Roi(data, coordUnitSystem);
-        // run("GET SPECTRUM", "roi");
+        run("GET SPECTRUM", "roi");
     }
 
 }
@@ -113,160 +114,6 @@ macro "Import ROIs from CARTA Action Tool Options" {
  * ---------------------------------
  * ---------------------------------
  */
-
-
-/**
- * Parse a crtf data list and create a madcuba ROI
- * 
- * @param data  Data list containing ROI parameters
- */
-function importDs9Roi(data, coordUnitSystem) {
-
-    geometry = newArray ("point", "line", "polyline", "box",  
-                         "polygon", "circle", "ellipse"); 
-    /* POINT */
-    if (indexOf(data[0], geometry[0]) == 0) {
-        point = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        x = parseFloat(point[0]);
-        y = parseFloat(point[1]);
-        makePoint(x, y);
-        // print("painted: " + x + ", " + y);
-    
-    /* LINE */
-    } else if (indexOf(data[0], geometry[1]) == 0) {
-        point1 = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        x1 = parseFloat(point1[0]);
-        y1 = parseFloat(point1[1]);
-        point2 = parseDs9Coords(data[3], data[4], coordUnitSystem);
-        x2 = parseFloat(point2[0]);
-        y2 = parseFloat(point2[1]);
-        makeLine(x1, y1, x2, y2);
-        // print("from: " + x1 + ", " + y1);
-        // print("to: " + x2 + ", " + y2);
-    
-    /* POLYLINE (almost the same as polygon) */
-    } else if (indexOf(data[0], geometry[2]) == 0) {
-        stop = 0;
-        idx = 0;    // index of points
-        numb = 1;   // index from which to start reading data array
-        x = newArray(round(data.length/2));
-        y = newArray(round(data.length/2));
-        do {         
-            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
-            x[idx] = 
-                parseFloat(call(
-                    "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
-            y[idx] = 
-                parseFloat(call(
-                    "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
-            /* stop when # appears in the ROI file (at the end
-            of the vertices). */
-            if (startsWith(data[numb+2]," #") == 1) {
-                stop=1;
-            }
-            idx++;
-            /* Jump to the next polygon vertex. The data object is 
-            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
-            numb = numb + 2;
-        } while (stop != 1)
-        /* trim extra elements of the array that were created before */
-        x = Array.trim(x, idx);
-        y = Array.trim(y, idx);
-        makeSelection("polyline", x, y);
-        // Array.show(x, y);
-
-    /* BOX (rotation=0) */
-    } else if ((indexOf(data[0], geometry[3]) == 0)) {
-        if ((data[5] == "0") || (data[5] == " 0")) {  // ROTATION=0
-            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-            x_center = parseFloat(center[0]);
-            y_center = parseFloat(center[1]);
-            width = parseDs9ArcLength(data[3], coordUnitSystem);
-            height = parseDs9ArcLength(data[4], coordUnitSystem);
-            x1 = x_center - parseFloat(width/2);
-            y1 = y_center - parseFloat(height/2);
-            x_width = parseFloat(width);
-            y_width = parseFloat(height);
-            /* MADCUBA does the rounding when working with makeRectangle */
-            makeRectangle(x1, y1, x_width, y_width);
-        } else if ((data[5] != "0") && (data[5] != " 0")) {  // ROTATED
-            pa = parseDs9Angle(data[5]);
-            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-            b1 = parseDs9ArcLength(data[3], coordUnitSystem);
-            b2 = parseDs9ArcLength(data[4], coordUnitSystem);
-            rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
-                        b1/2, b2/2, pa);
-        }
-
-    /* POLYGON */
-    } else if (indexOf(data[0], geometry[4]) == 0) {
-        stop = 0;
-        idx = 0;    // index of points
-        numb = 1;   // index from which to start reading data array
-        x = newArray(round(data.length/2));
-        y = newArray(round(data.length/2));
-        do {
-            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
-            x[idx] = 
-                parseFloat(call(
-                    "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
-            y[idx] = 
-                parseFloat(call(
-                    "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
-            /* stop when # appears in the ROI file (at the end
-            of the vertices). */
-            if (startsWith(data[numb+2]," #") == 1) {
-                stop=1;
-            }
-            idx++;
-            /* Jump to the next polygon vertex. The data object is 
-            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
-            numb = numb + 2;
-        } while (stop != 1)
-        /* trim extra elements of the array that were created before if
-        the crtf file has more parameters at the end */
-        x2 = Array.trim(x, idx);
-        y2 = Array.trim(y, idx);
-        makeSelection("polygon", x2, y2);
-        // Array.show(x, y, x2, y2);
-
-    /* CIRCLE  */
-    } else if (indexOf(data[0], geometry[5]) == 0) {
-        pa = 0;
-        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        xCenter = parseFloat(center[0]);
-        yCenter = parseFloat(center[1]);
-        radius = parseDs9ArcLength(data[3], coordUnitSystem);
-        toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
-                    parseFloat(abs(radius)), pa);
-        
-    /* ELLIPSE */
-    } else if (indexOf(data[0], geometry[6]) == 0) {
-        pa = parseDs9Angle(data[5]);
-        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        xCenter = parseFloat(center[0]);
-        yCenter = parseFloat(center[1]);
-        /* For an ellipse the first axis in the code is the Yaxis.
-            * Lets change the order to have Xaxis first and then Yaxis. */
-        ax_y = parseDs9ArcLength(data[3], coordUnitSystem);
-        ax_x = parseDs9ArcLength(data[4], coordUnitSystem);
-        /* Set the major axis and convert the position angle if needed.
-        In 'toEllipse' the position angle is that of the major axis, but
-        in DS9 it is the angle of the X-axis. The position angle must
-        be transformed to the angle of the biggest axis. Which is simply
-        rotating it 90 degrees if the Y-axis is the major axis */
-        if (abs(ax_x) > abs(ax_y)) {
-            bmaj = ax_x;
-            bmin = ax_y;
-        } else {
-            bmaj = ax_y;
-            bmin = ax_x;
-            pa = pa+PI/2;
-        }
-        toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
-                    parseFloat(abs(bmin)), pa);
-    }
-}
 
 
 /**
@@ -450,6 +297,164 @@ function importCrtfRoi(data) {
         }
         toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
                     parseFloat(abs(bmin)), pa);
+    } else {
+        exit("Error: CRTF RoI type <" + data[0] + "> not recognized.");
+    }
+}
+
+
+/**
+ * Parse a crtf data list and create a madcuba ROI
+ * 
+ * @param data  Data list containing ROI parameters
+ */
+function importDs9Roi(data, coordUnitSystem) {
+
+    geometry = newArray ("point", "line", "polyline", "box",  
+                         "polygon", "circle", "ellipse"); 
+    /* POINT */
+    if (indexOf(data[0], geometry[0]) == 0) {
+        point = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        x = parseFloat(point[0]);
+        y = parseFloat(point[1]);
+        makePoint(x, y);
+        // print("painted: " + x + ", " + y);
+    
+    /* LINE */
+    } else if (indexOf(data[0], geometry[1]) == 0) {
+        point1 = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        x1 = parseFloat(point1[0]);
+        y1 = parseFloat(point1[1]);
+        point2 = parseDs9Coords(data[3], data[4], coordUnitSystem);
+        x2 = parseFloat(point2[0]);
+        y2 = parseFloat(point2[1]);
+        makeLine(x1, y1, x2, y2);
+        // print("from: " + x1 + ", " + y1);
+        // print("to: " + x2 + ", " + y2);
+    
+    /* POLYLINE (almost the same as polygon) */
+    } else if (indexOf(data[0], geometry[2]) == 0) {
+        stop = 0;
+        idx = 0;    // index of points
+        numb = 1;   // index from which to start reading data array
+        x = newArray(round(data.length/2));
+        y = newArray(round(data.length/2));
+        do {         
+            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
+            x[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+            /* stop when # appears in the ROI file (at the end
+            of the vertices). */
+            if (startsWith(data[numb+2]," #") == 1) {
+                stop=1;
+            }
+            idx++;
+            /* Jump to the next polygon vertex. The data object is 
+            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
+            numb = numb + 2;
+        } while (stop != 1)
+        /* trim extra elements of the array that were created before */
+        x = Array.trim(x, idx);
+        y = Array.trim(y, idx);
+        makeSelection("polyline", x, y);
+        // Array.show(x, y);
+
+    /* BOX (rotation=0) */
+    } else if ((indexOf(data[0], geometry[3]) == 0)) {
+        if ((data[5] == "0") || (data[5] == " 0")) {  // ROTATION=0
+            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+            x_center = parseFloat(center[0]);
+            y_center = parseFloat(center[1]);
+            width = parseDs9ArcLength(data[3], coordUnitSystem);
+            height = parseDs9ArcLength(data[4], coordUnitSystem);
+            x1 = x_center - parseFloat(width/2);
+            y1 = y_center - parseFloat(height/2);
+            x_width = parseFloat(width);
+            y_width = parseFloat(height);
+            /* MADCUBA does the rounding when working with makeRectangle */
+            makeRectangle(x1, y1, x_width, y_width);
+        } else if ((data[5] != "0") && (data[5] != " 0")) {  // ROTATED
+            pa = parseDs9Angle(data[5]);
+            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+            b1 = parseDs9ArcLength(data[3], coordUnitSystem);
+            b2 = parseDs9ArcLength(data[4], coordUnitSystem);
+            rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
+                        b1/2, b2/2, pa);
+        }
+
+    /* POLYGON */
+    } else if (indexOf(data[0], geometry[4]) == 0) {
+        stop = 0;
+        idx = 0;    // index of points
+        numb = 1;   // index from which to start reading data array
+        x = newArray(round(data.length/2));
+        y = newArray(round(data.length/2));
+        do {
+            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
+            x[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+            /* stop when # appears in the ROI file (at the end
+            of the vertices). */
+            if (startsWith(data[numb+2]," #") == 1) {
+                stop=1;
+            }
+            idx++;
+            /* Jump to the next polygon vertex. The data object is 
+            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
+            numb = numb + 2;
+        } while (stop != 1)
+        /* trim extra elements of the array that were created before if
+        the crtf file has more parameters at the end */
+        x2 = Array.trim(x, idx);
+        y2 = Array.trim(y, idx);
+        makeSelection("polygon", x2, y2);
+        // Array.show(x, y, x2, y2);
+
+    /* CIRCLE  */
+    } else if (indexOf(data[0], geometry[5]) == 0) {
+        pa = 0;
+        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        radius = parseDs9ArcLength(data[3], coordUnitSystem);
+        toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
+                    parseFloat(abs(radius)), pa);
+        
+    /* ELLIPSE */
+    } else if (indexOf(data[0], geometry[6]) == 0) {
+        pa = parseDs9Angle(data[5]);
+        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        /* For an ellipse the first axis in the code is the Yaxis.
+            * Lets change the order to have Xaxis first and then Yaxis. */
+        ax_y = parseDs9ArcLength(data[3], coordUnitSystem);
+        ax_x = parseDs9ArcLength(data[4], coordUnitSystem);
+        /* Set the major axis and convert the position angle if needed.
+        In 'toEllipse' the position angle is that of the major axis, but
+        in DS9 it is the angle of the X-axis. The position angle must
+        be transformed to the angle of the biggest axis. Which is simply
+        rotating it 90 degrees if the Y-axis is the major axis */
+        if (abs(ax_x) > abs(ax_y)) {
+            bmaj = ax_x;
+            bmin = ax_y;
+        } else {
+            bmaj = ax_y;
+            bmin = ax_x;
+            pa = pa+PI/2;
+        }
+        toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
+                    parseFloat(abs(bmin)), pa);
+    } else {
+        exit("Error: DS9 RoI type <" + data[0] + "> not recognized.");
     }
 }
 
