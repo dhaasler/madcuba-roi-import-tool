@@ -1,0 +1,2 @@
+#CRTFv0 CASA Region Text Format version 0
+poly [[16.5395pix, 16.6649pix], [18.0194pix, 19.1313pix], [19.3583pix, 16.6179pix]] coord=ICRS, linewidth=1, linestyle=-, color=green

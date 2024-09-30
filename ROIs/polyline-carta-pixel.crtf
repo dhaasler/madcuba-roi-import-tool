@@ -1,0 +1,2 @@
+#CRTFv0 CASA Region Text Format version 0
+polyline [[15.5999pix, 17.6280pix], [16.9388pix, 20.0005pix], [18.3248pix, 17.6515pix]] coord=ICRS, linewidth=2, linestyle=-, color=2ee6d6
