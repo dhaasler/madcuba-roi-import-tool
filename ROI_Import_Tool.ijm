@@ -30,9 +30,9 @@
  *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.2-alpha1";
+var version = "v1.2";
 var date = "20240930";
-var changelog = "Start implementing ds9 regions";
+var changelog = "Add support for DS9 regions.";
 
 // Global variables
 var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
@@ -61,11 +61,11 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f
         the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
         data = split(rows[1], "][,");
 
-        /* uncomment for quick data log */
-        print("New run");
-        for (j=0; j<data.length; j++) {
-            print("data[" + j + "]: '" + data[j] + "'");
-        }
+        // /* uncomment for quick data log */
+        // print("New run");
+        // for (j=0; j<data.length; j++) {
+        //     print("data[" + j + "]: '" + data[j] + "'");
+        // }
 
         importCrtfRoi(data);
         run("GET SPECTRUM", "roi");
@@ -97,7 +97,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f
 macro "Import ROIs from CARTA Action Tool Options" {
     showMessage("Info", "<html>"
     + "<center><h2>ROI Import Tool</h2></center>"
-    + "Custom made tool to convert CASA and CARTA ROIs to MADCUBA.<br><br>"
+    + "Custom made tool to import CASA, CARTA, and DS9 ROIs into MADCUBA.<br><br>"
     + "<strong>Important</strong>: A cube or image must be opened and selected "
     + "before running this macro. <br><br>"
     + "<h3>Changelog</h3>"
@@ -151,11 +151,6 @@ function importDs9Roi(data, coordUnitSystem) {
         numb = 1;   // index from which to start reading data array
         x = newArray(round(data.length/2));
         y = newArray(round(data.length/2));
-
-        if (startsWith(data[7]," #") == 1) {
-                print("yes#");
-            }
-
         do {         
             b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
             x[idx] = 
@@ -165,14 +160,13 @@ function importDs9Roi(data, coordUnitSystem) {
                 parseFloat(call(
                     "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
             /* stop when # appears in the ROI file (at the end
-            of the vertices). In the ROI file when ]] appears, the next
-            item is not a blank space, but a new keyword */
+            of the vertices). */
             if (startsWith(data[numb+2]," #") == 1) {
                 stop=1;
             }
             idx++;
             /* Jump to the next polygon vertex. The data object is 
-            separated: ...[Xn], [Yn], [ ], [Xn+1], [Yn+1], [ ]... */
+            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
             numb = numb + 2;
         } while (stop != 1)
         /* trim extra elements of the array that were created before */
@@ -182,214 +176,97 @@ function importDs9Roi(data, coordUnitSystem) {
         // Array.show(x, y);
 
     /* BOX (rotation=0) */
-    } else if ((indexOf(data[0], geometry[3]) == 0)
-               && ((data[5] == "0") || (data[5] == " 0"))) {
-        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        x_center = parseFloat(center[0]);
-        y_center = parseFloat(center[1]);
-        width = parseDs9ArcLength(data[3], coordUnitSystem);
-        height = parseDs9ArcLength(data[4], coordUnitSystem);
-        x1 = x_center - parseFloat(width/2);
-        y1 = y_center - parseFloat(height/2);
-        x_width = parseFloat(width);
-        y_width = parseFloat(height);
-        /* MADCUBA does the rounding when working with makeRectangle */
-        makeRectangle(x1, y1, x_width, y_width);
+    } else if ((indexOf(data[0], geometry[3]) == 0)) {
+        if ((data[5] == "0") || (data[5] == " 0")) {  // ROTATION=0
+            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+            x_center = parseFloat(center[0]);
+            y_center = parseFloat(center[1]);
+            width = parseDs9ArcLength(data[3], coordUnitSystem);
+            height = parseDs9ArcLength(data[4], coordUnitSystem);
+            x1 = x_center - parseFloat(width/2);
+            y1 = y_center - parseFloat(height/2);
+            x_width = parseFloat(width);
+            y_width = parseFloat(height);
+            /* MADCUBA does the rounding when working with makeRectangle */
+            makeRectangle(x1, y1, x_width, y_width);
+        } else if ((data[5] != "0") && (data[5] != " 0")) {  // ROTATED
+            pa = parseDs9Angle(data[5]);
+            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+            b1 = parseDs9ArcLength(data[3], coordUnitSystem);
+            b2 = parseDs9ArcLength(data[4], coordUnitSystem);
+            rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
+                        b1/2, b2/2, pa);
+        }
 
-    /* ROTATED BOX */
-    } else if ((indexOf(data[0], geometry[3]) == 0)
-               && (data[5] != "0") && (data[5] != " 0")) {
+    /* POLYGON */
+    } else if (indexOf(data[0], geometry[4]) == 0) {
+        stop = 0;
+        idx = 0;    // index of points
+        numb = 1;   // index from which to start reading data array
+        x = newArray(round(data.length/2));
+        y = newArray(round(data.length/2));
+        do {
+            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
+            x[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[idx] = 
+                parseFloat(call(
+                    "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+            /* stop when # appears in the ROI file (at the end
+            of the vertices). */
+            if (startsWith(data[numb+2]," #") == 1) {
+                stop=1;
+            }
+            idx++;
+            /* Jump to the next polygon vertex. The data object is 
+            separated: ...Xn, Yn, Xn+1, Yn+1, ... */
+            numb = numb + 2;
+        } while (stop != 1)
+        /* trim extra elements of the array that were created before if
+        the crtf file has more parameters at the end */
+        x2 = Array.trim(x, idx);
+        y2 = Array.trim(y, idx);
+        makeSelection("polygon", x2, y2);
+        // Array.show(x, y, x2, y2);
+
+    /* CIRCLE  */
+    } else if (indexOf(data[0], geometry[5]) == 0) {
+        pa = 0;
+        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        radius = parseDs9ArcLength(data[3], coordUnitSystem);
+        toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
+                    parseFloat(abs(radius)), pa);
+        
+    /* ELLIPSE */
+    } else if (indexOf(data[0], geometry[6]) == 0) {
         pa = parseDs9Angle(data[5]);
         center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-        b1 = parseDs9ArcLength(data[3], coordUnitSystem);
-        b2 = parseDs9ArcLength(data[4], coordUnitSystem);
-        rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
-                    b1/2, b2/2, pa);
-
-    // /* POLYGON */
-    // } else if (indexOf(data[0], geometry[6]) == 0) {
-    //     stop = 0;
-    //     idx = 0;    // index of points
-    //     numb = 1;   // index from which to start reading data array
-    //     x = newArray(round(data.length/3));
-    //     y = newArray(round(data.length/3));
-    //     do {
-    //         b = parseCrtfCoords(data[numb], data[numb+1]); 
-    //         x[idx] = 
-    //             parseFloat(call(
-    //                 "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
-    //         y[idx] = 
-    //             parseFloat(call(
-    //                 "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
-    //         /* stop when a double ]] appears in the ROI file (at the end
-    //         of the vertices). In the ROI file when ]] appears it has no
-    //         space afterwards, but a new keyword */
-    //         if (data[numb+2] != " ") {
-    //             stop=1;
-    //         }
-    //         idx++;
-    //         /* Jump to the next polygon vertex. The data object is 
-    //         separated: ...[Xn], [Yn], [. ], [Xn+1], [Yn+1], [. ]... */
-    //         numb = numb + 3;
-    //     } while (stop != 1)
-    //     /* trim extra elements of the array that were created before if
-    //     the crtf file has more parameters at the end */
-    //     x2 = Array.trim(x, idx);
-    //     y2 = Array.trim(y, idx);
-    //     makeSelection("polygon", x2, y2);
-    //     // Array.show(x, y, x2, y2);
-
-    // /* CIRCLE  */
-    // } else if (indexOf(data[0], geometry[7]) == 0) {
-    //     pa = 0;
-    //     center = parseCrtfCoords(data[1], data[2] );
-    //     xCenter = parseFloat(center[0]);
-    //     yCenter = parseFloat(center[1]);
-    //     radius = parseCrtfArcLength(data[3]);
-    //     toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
-    //                 parseFloat(abs(radius)), pa);
-        
-    // /* ANNULUS */
-    // } else if (indexOf(data[0], geometry[8]) == 0) {
-    //     center = parseCrtfCoords(data[1], data[2]);
-    //     xCenter = parseFloat(center[0]);
-    //     yCenter = parseFloat(center[1]);
-    //     r1 = parseCrtfArcLength(data[3]);
-    //     r2 = parseCrtfArcLength(data[4]);
-    //     x2 = xCenter - parseFloat(r2);   // outer circle
-    //     y2 = yCenter - parseFloat(r2);
-    //     makeOval(x2, y2, r2*2, r2*2);
-    //     x1 = xCenter - parseFloat(r1);   // inner circle
-    //     y1 = yCenter - parseFloat(r1);
-    //     setKeyDown("alt");
-    //     makeOval(x1, y1, r1*2, r1*2);
-    //     setKeyDown("none");
-
-    // /* ELLIPSE */
-    // } else if (indexOf(data[0], geometry[9]) == 0) {
-    //     pa = parseCrtfAngle(data[6]);
-    //     center = parseCrtfCoords(data[1], data[2]);
-    //     xCenter = parseFloat(center[0]);
-    //     yCenter = parseFloat(center[1]);
-    //     /* For an ellipse the first axis in the code is the Yaxis.
-    //         * Lets change the order to have Xaxis first and then Yaxis. */
-    //     ax_y = parseCrtfArcLength(data[4]);
-    //     ax_x = parseCrtfArcLength(data[5]);
-    //     /* Set the major axis and convert the position angle if needed.
-    //     In 'toEllipse' the position angle is that of the major axis, but
-    //     in CARTA it is the angle of the Y-axis. The position angle must
-    //     be transformed to the angle of the biggest axis. Which is simply
-    //     rotating it 90 degrees if the X-axis is the major axis */
-    //     if (abs(ax_x) > abs(ax_y)) {
-    //         bmaj = ax_x;
-    //         bmin = ax_y;
-    //         pa = pa-PI/2;
-    //     } else {
-    //         bmaj = ax_y;
-    //         bmin = ax_x;
-    //     }
-    //     toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
-    //                 parseFloat(abs(bmin)), pa);
-    // }
-}
-
-
-/**
- * Convert ds9 coordinates to a FITS image pixel
- *
- * @param ra  RA with units
- * @param dec  DEC with units
- * @return  Pixel of the image containing input coordinates
- */
-function parseDs9Coords (ra, dec, coordUnitSystem) {
-    output = newArray(2);
-    if (coordUnitSystem == "icrs") {
-        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", ra, dec, "");
-        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", ra, dec, "");
-
-    } else if (coordUnitSystem == "image") {
-        output[0] = toString(parseFloat(ra));
-        output[1] = toString(parseFloat(dec));
-    }
-    return output;
-}
-
-
-/**
- * Convert ds9 angle to radians
- *
- * @param val  Input angle with units
- * @return  Converted angle in radians
- */
-function parseDs9Angle (val) {
-    coordUnits = newArray("deg", "rad", "\'", "\"");
-    unitsFound = false;
-    for (j=0; j<coordUnits.length; j++) {
-        if (indexOf(val, coordUnits[j]) != -1) {
-            unitsval=j; // read units
-            unitsFound = true;
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        /* For an ellipse the first axis in the code is the Yaxis.
+            * Lets change the order to have Xaxis first and then Yaxis. */
+        ax_y = parseDs9ArcLength(data[3], coordUnitSystem);
+        ax_x = parseDs9ArcLength(data[4], coordUnitSystem);
+        /* Set the major axis and convert the position angle if needed.
+        In 'toEllipse' the position angle is that of the major axis, but
+        in DS9 it is the angle of the X-axis. The position angle must
+        be transformed to the angle of the biggest axis. Which is simply
+        rotating it 90 degrees if the Y-axis is the major axis */
+        if (abs(ax_x) > abs(ax_y)) {
+            bmaj = ax_x;
+            bmin = ax_y;
+        } else {
+            bmaj = ax_y;
+            bmin = ax_x;
+            pa = pa+PI/2;
         }
+        toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
+                    parseFloat(abs(bmin)), pa);
     }
-    if (unitsFound == true) {
-        angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
-        if (unitsval == 0)  angle = angle*PI/180.0;
-        else if (unitsval == 2) angle = (angle*PI/(180.0*60.0));
-        else if (unitsval == 3) angle = (angle*PI/(180.0*3600.0));
-    } else {  // degrees when no symbol is present
-        angle = parseFloat(val);
-        angle = angle*PI/180.0;
-    }
-    return angle;
 }
-
-
-/**
- * Convert arcs in the sky to pixels
- * Note that this function uses the CDELT2 header parameter. This will
- * not be accurate for non-linear projections where CDELT1 != CDELT2.
- *
- * @param val  arc in the sky with units
- * @return  Converted arc
- */
-function parseDs9ArcLength (val, coordUnitSystem) {
-    cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
-    coordUnits = newArray("deg", "rad", "\'", "\"");
-    unitsval = -1;
-    coord = -1;
-    if (coordUnitSystem == "icrs") {
-        for (j=0; j<coordUnits.length; j++)
-            if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
-        if (unitsval == -1) value = parseFloat(val);
-        else value = parseFloat(
-            substring(val, 0, indexOf(val, coordUnits[unitsval])));
-        if      (unitsval == 0) coord = value / cdelt;
-        else if (unitsval == 1) coord = (value*180.0/PI) / cdelt;
-        else if (unitsval == 2) coord = (value/60.0) / cdelt;
-        else if (unitsval == 3) coord = (value/3600.0) / cdelt;
-        else coord = value / cdelt;  // degrees when no symbol is present
-    } else if (coordUnitSystem == "image") {
-        value = parseFloat(val);
-        coord = value;
-    }
-    return coord;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**
@@ -576,56 +453,6 @@ function importCrtfRoi(data) {
     }
 }
 
-/**
- * Draw a rotated rectangle given the input parameters
- * All parameters are in pixels except angle in radians
- *
- * @param x  X coordinates for the center of the rectangle
- * @param y  Y coordinates for the center of the rectangle
- * @param halfWidth  Half of the width of the rectangle
- * @param halfHeight  Half of the height of the rectangle
- * @param angle  Rotation Angle in a counterclockwise direction
- */
-function rotatedRect(x, y, halfWidth, halfHeight, angle) {
-    x1 = newArray(4);
-    y1 = newArray(4);
-    c = cos(angle);
-    s = sin(angle);
-    r1x = -halfWidth * c - halfHeight * s;
-    r1y = -halfWidth * s + halfHeight * c;
-    r2x =  halfWidth * c - halfHeight * s;
-    r2y =  halfWidth * s + halfHeight * c;
-    // Returns four points in clockwise order starting from the top left.
-    x1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r1x));
-    x1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r2x));
-    x1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r1x));
-    x1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r2x));
-    y1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r1y));
-    y1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r2y));
-    y1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r1y));
-    y1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r2y));
-    makeSelection("polygon", x1, y1);
-    // Array.show(x1, y1);
-}
-
-/**
- * Draw ellipse given the input parameters
- * All parameters are in pixels except pa in radians
- *
- * @param x  X coordinates for the center of the ellipse
- * @param y  Y coordinates for the center of the ellipse
- * @param bmaj  Major axis
- * @param bmin  Minor axis
- * @param pa  Position Angle of the major axis in a counterclockwise direction
- */
-function toEllipse(x, y, bmaj, bmin, pa) {
-    x1 = x - bmaj*sin(pa);
-    y1 = y + bmaj*cos(pa);
-    x2 = x + bmaj*sin(pa);
-    y2 = y - bmaj*cos(pa);
-    e = bmin/bmaj;
-    makeEllipse(x1, y1, x2, y2, e);
-}
 
 /**
  * Convert crtf angle to radians
@@ -643,6 +470,35 @@ function parseCrtfAngle (val) {
     else if (unitsval == 3) angle = (angle*PI/(180.0*3600.0));
     return angle;
 }
+
+
+/**
+ * Convert ds9 angle to radians
+ *
+ * @param val  Input angle with units
+ * @return  Converted angle in radians
+ */
+function parseDs9Angle (val) {
+    coordUnits = newArray("deg", "rad", "\'", "\"");
+    unitsFound = false;
+    for (j=0; j<coordUnits.length; j++) {
+        if (indexOf(val, coordUnits[j]) != -1) {
+            unitsval=j; // read units
+            unitsFound = true;
+        }
+    }
+    if (unitsFound == true) {
+        angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
+        if (unitsval == 0)  angle = angle*PI/180.0;
+        else if (unitsval == 2) angle = (angle*PI/(180.0*60.0));
+        else if (unitsval == 3) angle = (angle*PI/(180.0*3600.0));
+    } else {  // degrees when no symbol is present
+        angle = parseFloat(val);
+        angle = angle*PI/180.0;
+    }
+    return angle;
+}
+
 
 /**
  * Convert crtf coordinates to a FITS image pixel
@@ -709,8 +565,30 @@ function parseCrtfCoords (ra, dec) {
     return output;
 }
 
+
 /**
- * Convert arcs in the sky to pixels
+ * Convert ds9 coordinates to a FITS image pixel
+ *
+ * @param ra  RA with units
+ * @param dec  DEC with units
+ * @return  Pixel of the image containing input coordinates
+ */
+function parseDs9Coords (ra, dec, coordUnitSystem) {
+    output = newArray(2);
+    if (coordUnitSystem == "icrs") {
+        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", ra, dec, "");
+        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", ra, dec, "");
+
+    } else if (coordUnitSystem == "image") {
+        output[0] = toString(parseFloat(ra));
+        output[1] = toString(parseFloat(dec));
+    }
+    return output;
+}
+
+
+/**
+ * Convert crtf arcs in the sky to pixels
  * Note that this function uses the CDELT2 header parameter. This will
  * not be accurate for non-linear projections where CDELT1 != CDELT2.
  *
@@ -735,4 +613,89 @@ function parseCrtfArcLength (val) {
     else if (unitsval == 3) coord = (value/3600.0) / cdelt;
     else if (unitsval == 4) coord = value;
     return coord;
+}
+
+
+/**
+ * Convert ds9 arcs in the sky to pixels
+ * Note that this function uses the CDELT2 header parameter. This will
+ * not be accurate for non-linear projections where CDELT1 != CDELT2.
+ *
+ * @param val  arc in the sky with units
+ * @return  Converted arc
+ */
+function parseDs9ArcLength (val, coordUnitSystem) {
+    cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
+    coordUnits = newArray("deg", "rad", "\'", "\"");
+    unitsval = -1;
+    coord = -1;
+    if (coordUnitSystem == "icrs") {
+        for (j=0; j<coordUnits.length; j++)
+            if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
+        if (unitsval == -1) value = parseFloat(val);
+        else value = parseFloat(
+            substring(val, 0, indexOf(val, coordUnits[unitsval])));
+        if      (unitsval == 0) coord = value / cdelt;
+        else if (unitsval == 1) coord = (value*180.0/PI) / cdelt;
+        else if (unitsval == 2) coord = (value/60.0) / cdelt;
+        else if (unitsval == 3) coord = (value/3600.0) / cdelt;
+        else coord = value / cdelt;  // degrees when no symbol is present
+    } else if (coordUnitSystem == "image") {
+        value = parseFloat(val);
+        coord = value;
+    }
+    return coord;
+}
+
+
+/**
+ * Draw a rotated rectangle given the input parameters
+ * All parameters are in pixels except angle in radians
+ *
+ * @param x  X coordinates for the center of the rectangle
+ * @param y  Y coordinates for the center of the rectangle
+ * @param halfWidth  Half of the width of the rectangle
+ * @param halfHeight  Half of the height of the rectangle
+ * @param angle  Rotation Angle in a counterclockwise direction
+ */
+function rotatedRect(x, y, halfWidth, halfHeight, angle) {
+    x1 = newArray(4);
+    y1 = newArray(4);
+    c = cos(angle);
+    s = sin(angle);
+    r1x = -halfWidth * c - halfHeight * s;
+    r1y = -halfWidth * s + halfHeight * c;
+    r2x =  halfWidth * c - halfHeight * s;
+    r2y =  halfWidth * s + halfHeight * c;
+    // Returns four points in clockwise order starting from the top left.
+    x1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r1x));
+    x1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x + r2x));
+    x1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r1x));
+    x1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJX", x - r2x));
+    y1[0] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r1y));
+    y1[1] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y + r2y));
+    y1[2] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r1y));
+    y1[3] = parseFloat(call("CONVERT_PIXELS_COORDINATES.fits2ImageJY", y - r2y));
+    makeSelection("polygon", x1, y1);
+    // Array.show(x1, y1);
+}
+
+
+/**
+ * Draw ellipse given the input parameters
+ * All parameters are in pixels except pa in radians
+ *
+ * @param x  X coordinates for the center of the ellipse
+ * @param y  Y coordinates for the center of the ellipse
+ * @param bmaj  Major axis
+ * @param bmin  Minor axis
+ * @param pa  Position Angle of the major axis in a counterclockwise direction
+ */
+function toEllipse(x, y, bmaj, bmin, pa) {
+    x1 = x - bmaj*sin(pa);
+    y1 = y + bmaj*cos(pa);
+    x2 = x + bmaj*sin(pa);
+    y2 = y - bmaj*cos(pa);
+    e = bmin/bmaj;
+    makeEllipse(x1, y1, x2, y2, e);
 }
