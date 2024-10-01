@@ -1,0 +1,2 @@
+# Matplotlib ROI: RotatedRectangle((x1, y1), width, height, angle)
+RotatedRectangle((80pix, 83pix), 3pix, 5pix, 10.0deg)

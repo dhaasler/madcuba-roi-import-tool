@@ -1,51 +1,21 @@
 /* 
- * Custom made macro to convert CASA and CARTA ROIs to MADCUBA
+ * Custom made macro to import regions from CASA and CARTA (.crtf),
+ * DS9 (.ds9), and matplotlib patches (.pyroi) as ROIs into MADCUBA
  * A cube or image must be opened and selected before running this macro
- *
- * Possible ROIs:
- * Point as coordinates:
- *     symbol [x, y]
- * Line; the two coordinates are the vertices:
- *     line [[x1, y1], [x2, y2]]
- * Polyline; there could be many [x, y] vertices:
- *     polyline [[x1, y1], [x2, y2], [x3, y3], ...] 
- * Rectangular box; the two coordinates are two opposite corners:
- *     box [[x1, y1], [x2, y2]]
- * Center box; [x, y] define the center point of the box and [x_width, y_width]
- *     the width of the sides:
- *     centerbox [[x, y], [x_width, y_width]]
- * Rotated box; [x, y] define the center point of the box; [x_width, y_width]
- *     the width of the sides; rotang the rotation angle:
- *     rotbox [[x, y], [x_width, y_width], rotang]
- * Polygon; there could be many [x, y] corners; note that the last point will
- *     connect with the first point to close the polygon:
- *     poly [[x1, y1], [x2, y2], [x3, y3], ...]
- * Circle; center of the circle [x,y], r is the radius:
- *     circle [[x, y], r]
- * Annulus; center of the circle is [x, y], [r1, r2] are inner and outer radii:
- *     annulus [[x, y], [r1, r2]]
- * Ellipse; center of the ellipse is [x, y]; semi-axes are [b1, b2] starting
- *     with the vertical axis when first drawing the ellipse; position angle of 
- *     vertical axis is pa:
- *     ellipse [[x, y], [b1, b2], pa]
  */
 
-var version = "v1.2";
-var date = "20240930";
-var changelog = "Add support for DS9 regions.";
+var version = "v1.3.0";
+var date = "20241001";
+var changelog = "Add preliminary support for some matplotlib patches.";
 
-// Global variables
-var coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
-
-macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
-       // RoI: C037T0b10R T6b09o Tcb09I
+macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
 
     path = File.openDialog("Select a ROI File");
     fx = File.openAsString(path);
 
-    rows = split(fx,"\n\r");                    // separate file into rows
+    rows = split(fx,"\n\r");  // separate file into rows
     
-    if (startsWith(rows[0],"#CRTF") == 1) {     // CRTF file
+    if (startsWith(rows[0],"#CRTF") == 1) {  // CRTF file
         /* search the coord system string and store it */
         if (indexOf(rows[1], "coord=") != -1) {
             coordSystem = split(substring(rows[1], indexOf(rows[1],
@@ -71,7 +41,7 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f
         run("GET SPECTRUM", "roi");
     }
 
-    if (startsWith(rows[0],"# Region file format: DS9") == 1) {     // DS9 file
+    if (startsWith(rows[0],"# Region file format: DS9") == 1) {  // DS9 file
         /* search the coord system units string (icrs or image) and store it */
         coordUnitSystem = rows[2];
 
@@ -93,12 +63,32 @@ macro "Import ROIs from CARTA Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f
         run("GET SPECTRUM", "roi");
     }
 
+    if (startsWith(rows[0],"# Matplotlib ROI") == 1) {  // PyRoi file
+
+        /* Separate the data into an array, data[0] contains the RoI type
+        Some of these strings are preceded or followed by a blank space. 
+        That is why later the 'if' conditions are not comparing data[0]
+        with strings, but locating the position of the polygon string in 
+        the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
+        data = split(rows[1], ")(,");
+
+        // /* uncomment for quick data log */
+        // print("New run");
+        // for (j=0; j<data.length; j++) {
+        //     print("data[" + j + "]: '" + data[j] + "'");
+        // }
+
+        importPyRoi(data);
+        run("GET SPECTRUM", "roi");
+    }
+
 }
 
-macro "Import ROIs from CARTA Action Tool Options" {
+macro "ROI Import Action Tool Options" {
     showMessage("Info", "<html>"
     + "<center><h2>ROI Import Tool</h2></center>"
-    + "Custom made tool to import CASA, CARTA, and DS9 ROIs into MADCUBA.<br><br>"
+    + "Custom made macro to import regions from CASA and CARTA (.crtf), DS9 (.ds9)"
+    + ", and <br> matplotlib patches (.pyroi) as ROIs into MADCUBA.<br><br>"
     + "<strong>Important</strong>: A cube or image must be opened and selected "
     + "before running this macro. <br><br>"
     + "<h3>Changelog</h3>"
@@ -114,6 +104,116 @@ macro "Import ROIs from CARTA Action Tool Options" {
  * ---------------------------------
  * ---------------------------------
  */
+
+
+/**
+ * Parse a pyroi data list and create a madcuba ROI
+ * 
+ * @param data  Data list containing ROI parameters
+ */
+function importPyRoi(data) {
+
+    geometry = newArray ("Rectangle", "RotatedRectangle", "Circle",
+                         "Ellipse", "Annulus", "Polygon"); 
+    
+    /* RECTANGLE */
+    if (indexOf(data[0], geometry[0]) == 0) {
+        corner1 = parseCrtfCoords(data[1], data[2]);
+        x1 = parseFloat(corner1[0]);
+        y1 = parseFloat(corner1[1]);
+        width = parseCrtfArcLength(data[3]);
+        height = parseCrtfArcLength(data[4]);
+        x_width = parseFloat(width);
+        y_width = parseFloat(height);
+        /* MADCUBA does the rounding when working with makeRectangle */
+        makeRectangle(x1, y1, x_width, y_width);
+
+    /* ROTATED BOX */
+    } else if (indexOf(data[0], geometry[1]) == 0) {
+        pa = parseCrtfAngle(data[5]);
+        corner1 = parseCrtfCoords(data[1], data[2]);
+        x1 = parseFloat(corner1[0]);
+        y1 = parseFloat(corner1[1]);
+        b1 = parseCrtfArcLength(data[3]);
+        b2 = parseCrtfArcLength(data[4]);
+        /* Calculate center of the box with the given width, height and angle */
+        centerX = x1 + (b1/2 * cos(pa) - b2/2 * sin(pa));  
+        centerY = y1 + (b1/2 * sin(pa) + b2/2 * cos(pa));
+        rotatedRect(parseFloat(centerX), parseFloat(centerY),
+                    b1/2, b2/2, pa);
+
+    /* CIRCLE  */
+    } else if (indexOf(data[0], geometry[2]) == 0) {
+        pa = 0;
+        center = parseCrtfCoords(data[1], data[2] );
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        radius = parseCrtfArcLength(data[3]);
+        toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
+                    parseFloat(abs(radius)), pa);
+
+    /* ELLIPSE */
+    } else if (indexOf(data[0], geometry[3]) == 0) {
+        pa = parseCrtfAngle(data[5]);
+        center = parseCrtfCoords(data[1], data[2]);
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        /* Matplotlib codes the entire axis, not semiaxis. */
+        ax_x = parseCrtfArcLength(data[3]) / 2;
+        ax_y = parseCrtfArcLength(data[4]) / 2;
+        /* Set the major axis and convert the position angle if needed.
+        In 'toEllipse' the position angle is that of the major axis, but
+        in matplotlib it is the angle of the Y-axis. The position angle must
+        be transformed to the angle of the biggest axis. Which is simply
+        rotating it 90 degrees if the X-axis is the major axis */
+        if (abs(ax_x) > abs(ax_y)) {
+            bmaj = ax_x;
+            bmin = ax_y;
+            pa = pa-PI/2;
+        } else {
+            bmaj = ax_y;
+            bmin = ax_x;
+        }
+        toEllipse(xCenter, yCenter, parseFloat(abs(bmaj)), 
+                    parseFloat(abs(bmin)), pa);
+
+    /* ANNULUS */
+    } else if (indexOf(data[0], geometry[4]) == 0) {
+        center = parseCrtfCoords(data[1], data[2]);
+        xCenter = parseFloat(center[0]);
+        yCenter = parseFloat(center[1]);
+        r1 = parseCrtfArcLength(data[3]);
+        r2 = parseCrtfArcLength(data[4]);
+        x2 = xCenter - parseFloat(r2);   // outer circle
+        y2 = yCenter - parseFloat(r2);
+        makeOval(x2, y2, r2*2, r2*2);
+        x1 = xCenter - parseFloat(r1);   // inner circle
+        y1 = yCenter - parseFloat(r1);
+        setKeyDown("alt");
+        makeOval(x1, y1, r1*2, r1*2);
+        setKeyDown("none");
+
+    /* POLYGON */
+    /* For matplotlib polygons we exactly know the length of the array
+    because the file ends after the last vertex. We do not need an 
+    ending condition. */
+    } else if (indexOf(data[0], geometry[5]) == 0) {
+        x = newArray(round(data.length/2) - 1);
+        y = newArray(round(data.length/2) - 1);
+        for (j=0; j<x.length; j++) {
+            b = parseCrtfCoords(data[2*j+1], data[2*j+2]); 
+            x[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+        }
+        makeSelection("polygon", x, y);
+        Array.show(x, y);
+
+    } else {
+        exit("Error: PYROI RoI type <" + data[0] + "> not recognized.");
+    }
+}
 
 
 /**
@@ -363,7 +463,7 @@ function importDs9Roi(data, coordUnitSystem) {
         makeSelection("polyline", x, y);
         // Array.show(x, y);
 
-    /* BOX (rotation=0) */
+    /* BOX */
     } else if ((indexOf(data[0], geometry[3]) == 0)) {
         if ((data[5] == "0") || (data[5] == " 0")) {  // ROTATION=0
             center = parseDs9Coords(data[1], data[2], coordUnitSystem);

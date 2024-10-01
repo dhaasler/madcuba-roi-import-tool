@@ -1,0 +1,2 @@
+# Matplotlib ROI: Polygon(x1, y1, x2, y2, x3, y3, ... )
+Polygon(96.0pix, 100.0pix, 96.0pix, 101.0pix, 93.0pix, 101.0pix, 93.0pix, 102.0pix, 99.0pix, 102.0pix, 99.0pix, 101.0pix, 97.0pix, 101.0pix, 97.0pix, 100.0pix, 96.0pix, 100.0pix)

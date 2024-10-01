@@ -1,0 +1,2 @@
+# Matplotlib ROI: Ellipse((x1, y1), width, height, angle)
+Ellipse((105pix, 105pix), 3pix, 8pix, 30deg)
