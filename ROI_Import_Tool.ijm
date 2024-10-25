@@ -1,12 +1,13 @@
 /* 
  * Custom made macro to import regions from CASA and CARTA (.crtf),
- * DS9 (.ds9), and matplotlib patches (.pyroi) as ROIs into MADCUBA
+ * DS9 (.ds9), MADCUBA (.mcroi), and matplotlib patches (.pyroi) as ROIs
+ * into MADCUBA.
  * A cube or image must be opened and selected before running this macro
  */
 
-var version = "v1.4.0-a";
+var version = "v1.4.0";
 var date = "20241025";
-var changelog = "Start custom MADCUBA ROI support";
+var changelog = "Add MADCUBA ROI support";
 
 macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
 
@@ -17,7 +18,7 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
 
     if (startsWith(rows[0],"// MADCUBA") == 1) {
         /* Search for units and coordinates system */
-        units = split(rows[1], "// ");
+        units = split(rows[1], "// ");  // it is an array with only one object
         coordSystem = split(rows[2], "// ");
         /* Separate the data into an array, data[0] contains the RoI type
         Some of these strings are preceded or followed by a blank space. 
@@ -33,6 +34,9 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
         for (j=0; j<data.length; j++) {
             print("data[" + j + "]: '" + data[j] + "'");
         }
+
+        importMadcubaRoi(data, units[0], coordSystem[0]);
+        run("GET SPECTRUM", "roi");
 
     
     } else if (startsWith(rows[0],"#CRTF") == 1) {  // CRTF file
@@ -124,6 +128,113 @@ macro "ROI Import Action Tool Options" {
  * ---------------------------------
  * ---------------------------------
  */
+
+/**
+ * Parse a Madcuba data list and create a madcuba ROI
+ * 
+ * @param data  Data list containing ROI parameters
+ */
+function importMadcubaRoi(data, units, coordSystem) {
+
+    geometry = newArray ("makePoint", "makeLine", "makePolyline",
+                         "makeRectangle", "makeOval", "makeEllipse",
+                         "makePolygon"); 
+    
+    /* POINT */
+    if (indexOf(data[0], geometry[0]) == 0) {
+        point = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        x = parseFloat(point[0]);
+        y = parseFloat(point[1]);
+        makePoint(x, y);
+        // print("painted: " + x + ", " + y);
+
+    /* LINE */
+    } else if (indexOf(data[0], geometry[1]) == 0) {
+        point1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        x1 = parseFloat(point1[0]);
+        y1 = parseFloat(point1[1]);
+        point2 = parseMadcubaCoords(data[3], data[4], units, coordSystem);
+        x2 = parseFloat(point2[0]);
+        y2 = parseFloat(point2[1]);
+        makeLine(x1, y1, x2, y2);
+        // print("from: " + x1 + ", " + y1);
+        // print("to: " + x2 + ", " + y2);
+
+    /* POLYLINE */
+    /* For madcuba polylines we exactly know the length of the array
+    because the file ends after the last vertex. We do not need an 
+    ending condition. */
+    } else if (indexOf(data[0], geometry[2]) == 0) {
+        x = newArray((data.length-1)/2);
+        y = newArray((data.length-1)/2);
+        for (j=0; j<x.length; j++) {
+            b = parseMadcubaCoords(data[2*j+1], data[2*j+2], units, coordSystem); 
+            x[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+        }
+        makeSelection("polyline", x, y);
+        // Array.show(x, y);
+
+    /* RECTANGLE */
+    } else if (indexOf(data[0], geometry[3]) == 0) {
+        corner1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        x1 = parseFloat(corner1[0]);
+        y1 = parseFloat(corner1[1]);
+        width = parseMadcubaArcLength(data[3], units);
+        height = parseMadcubaArcLength(data[4], units);
+        /* MADCUBA does the rounding when working with makeRectangle */
+        makeRectangle(x1, y1, width, height);
+        // print(x1, y1, width, height);
+
+    /* OVAL */
+    } else if (indexOf(data[0], geometry[4]) == 0) {
+        corner1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        x1 = parseFloat(corner1[0]);
+        y1 = parseFloat(corner1[1]);
+        width = parseMadcubaArcLength(data[3], units);
+        height = parseMadcubaArcLength(data[4], units);
+        /* MADCUBA does the rounding when working with makeRectangle */
+        makeOval(x1, y1, width, height);
+        // print(x1, y1, width, height);
+
+    /* ELLIPSE */
+    /* For madcuba polylines we exactly know the length of the array
+    because the file ends after the last vertex. We do not need an 
+    ending condition. */
+    } else if (indexOf(data[0], geometry[5]) == 0) {
+        point1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        x1 = parseFloat(point1[0]);
+        y1 = parseFloat(point1[1]);
+        point2 = parseMadcubaCoords(data[3], data[4], units, coordSystem);
+        x2 = parseFloat(point2[0]);
+        y2 = parseFloat(point2[1]);
+        aspectRatio = parseFloat(data[5]);
+        makeEllipse(x1, y1, x2, y2, aspectRatio);
+        // print(x1, y1, x2, y2, aspectRatio);
+    
+    /* POLYGON */
+    /* For madcuba polylines we exactly know the length of the array
+    because the file ends after the last vertex. We do not need an 
+    ending condition. */
+    } else if (indexOf(data[0], geometry[6]) == 0) {
+        x = newArray((data.length-1)/2);
+        y = newArray((data.length-1)/2);
+        for (j=0; j<x.length; j++) {
+            b = parseMadcubaCoords(data[2*j+1], data[2*j+2], units, coordSystem); 
+            x[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
+            y[j] = parseFloat(call(
+                "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
+        }
+        makeSelection("polygon", x, y);
+        // Array.show(x, y);
+
+    } else {
+        exit("Error: MADCUBA RoI type <" + data[0] + "> not recognized.");
+    }
+}
 
 
 /**
@@ -424,7 +535,7 @@ function importCrtfRoi(data) {
 
 
 /**
- * Parse a crtf data list and create a madcuba ROI
+ * Parse a ds9 data list and create a madcuba ROI
  * 
  * @param data  Data list containing ROI parameters
  */
@@ -692,6 +803,31 @@ function parseCrtfCoords (ra, dec) {
 
 
 /**
+ * Convert Madcuba coordinates to a FITS image pixel
+ *
+ * @param ra  RA with units
+ * @param dec  DEC with units
+ * @return  Pixel of the image containing input coordinates
+ */
+function parseMadcubaCoords (ra, dec, units, coordSystem) {
+    output = newArray(2);
+    if (units == "World") {
+        rafin = substring(ra, 0, indexOf(ra, "deg"));
+        decfin = substring(dec, 0, indexOf(dec, "deg"));
+        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX",
+                         rafin, decfin, coordSystem);
+        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
+                         rafin, decfin, coordSystem);
+
+    } else if (units == "Pixel") {
+        output[0] = toString(parseFloat(ra));
+        output[1] = toString(parseFloat(dec));
+    }
+    return output;
+}
+
+
+/**
  * Convert ds9 coordinates to a FITS image pixel
  *
  * @param ra  RA with units
@@ -709,6 +845,28 @@ function parseDs9Coords (ra, dec, coordUnitSystem) {
         output[1] = toString(parseFloat(dec));
     }
     return output;
+}
+
+
+/**
+ * Convert madcuba arcs in the sky to pixels
+ * Note that this function uses the CDELT2 header parameter. This will
+ * not be accurate for non-linear projections where CDELT1 != CDELT2.
+ *
+ * @param val  arc in the sky with units
+ * @return  Converted arc
+ */
+function parseMadcubaArcLength (val, units) {
+    cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
+    coord = -1;
+    if (units == "World") {
+        value = parseFloat(substring(val, 0, indexOf(val, "deg")));
+        coord = value / cdelt;
+    } else if (units == "Pixel") {
+        value = parseFloat(val);
+        coord = value;
+    }
+    return coord;
 }
 
 
