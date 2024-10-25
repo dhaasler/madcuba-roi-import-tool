@@ -4,9 +4,9 @@
  * A cube or image must be opened and selected before running this macro
  */
 
-var version = "v1.3.0";
-var date = "20241001";
-var changelog = "Add preliminary support for some matplotlib patches.";
+var version = "v1.4.0-a";
+var date = "20241025";
+var changelog = "Start custom MADCUBA ROI support";
 
 macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
 
@@ -14,8 +14,28 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
     fx = File.openAsString(path);
 
     rows = split(fx,"\n\r");  // separate file into rows
+
+    if (startsWith(rows[0],"// MADCUBA") == 1) {
+        /* Search for units and coordinates system */
+        units = split(rows[1], "// ");
+        coordSystem = split(rows[2], "// ");
+        /* Separate the data into an array, data[0] contains the RoI type
+        Some of these strings are preceded or followed by a blank space. 
+        That is why later the 'if' conditions are not comparing data[0]
+        with strings, but locating the position of the polygon string in 
+        the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
+        data = split(rows[3], ")(,;");
+
+        /* uncomment for quick data log */
+        print("New run");
+        print(units[0]);
+        print(coordSystem[0]);
+        for (j=0; j<data.length; j++) {
+            print("data[" + j + "]: '" + data[j] + "'");
+        }
+
     
-    if (startsWith(rows[0],"#CRTF") == 1) {  // CRTF file
+    } else if (startsWith(rows[0],"#CRTF") == 1) {  // CRTF file
         /* search the coord system string and store it */
         if (indexOf(rows[1], "coord=") != -1) {
             coordSystem = split(substring(rows[1], indexOf(rows[1],

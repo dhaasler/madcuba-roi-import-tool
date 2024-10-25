@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makeOval(x, y, width, height)
+// World
+// ICRS
+makeOval(248.099796574deg,-24.480742973deg,0.0005417deg,0.0003611deg);

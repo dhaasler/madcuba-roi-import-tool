@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makePolyline(x1, y1, x2, y2, x3, y3, ... )
+// World
+// ICRS
+makePolyline(248.099895773deg,248.099895773deg,248.099498976deg,248.099498976deg,248.099300607deg,248.100094172deg,248.099697382deg,248.099895773deg);

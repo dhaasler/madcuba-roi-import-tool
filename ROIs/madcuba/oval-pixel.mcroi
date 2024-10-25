@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makeOval(x, y, width, height)
+// Pixel
+// ICRS
+makeOval(18,18,3,2);

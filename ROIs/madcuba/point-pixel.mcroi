@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makePoint(x, y)
+// Pixel
+// ICRS
+makePoint(18.0625,17.125);

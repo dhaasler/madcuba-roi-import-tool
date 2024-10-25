@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makeRectangle(x, y, width, height)
+// Pixel
+// ICRS
+makeRectangle(18,17,2,2);

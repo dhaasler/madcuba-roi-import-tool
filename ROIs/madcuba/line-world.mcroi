@@ -1,0 +1,4 @@
+// MADCUBA ROI file: makeLine(x1, y1, x2, y2)
+// World
+// ICRS
+makeLine(248.099808981deg,-24.480917895deg,248.099393602deg,-24.480731703deg);
