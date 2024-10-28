@@ -160,7 +160,7 @@ function importMadcubaRoi(data, coordFrame, coordSystem) {
         point1 = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x1 = parseFloat(point1[0]);
         y1 = parseFloat(point1[1]);
-        point2 = parseMadcubaCoords(data[3], data[4], coordFrames, coordSystem);
+        point2 = parseMadcubaCoords(data[3], data[4], coordFrame, coordSystem);
         x2 = parseFloat(point2[0]);
         y2 = parseFloat(point2[1]);
         makeLine(x1, y1, x2, y2);
