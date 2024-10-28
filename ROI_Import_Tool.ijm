@@ -833,15 +833,26 @@ function parseDs9Coords (ra, dec, coordFrame) {
  */
 function parseMadcubaArcLength (val, coordFrame) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
-    coord = -1;
     if (coordFrame == "World") {
-        value = parseFloat(substring(val, 0, indexOf(val, "deg")));
-        coord = value / cdelt;
+        angleUnits = newArray("deg", "rad", "arcmin", "arcsec");
+        unitsVal = -1;
+        for (j=0; j<angleUnits.length; j++)
+            if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
+        if (unitsVal == -1) exit("Units not recognized. " + "Supported units "
+                                 + "are: deg, rad, arcmin, and arcsec.");
+
+        value = parseFloat(substring(val, 0, indexOf(val, angleUnits[unitsVal])));
+        if      (unitsVal == 0) length = value / cdelt;
+        else if (unitsVal == 1) length = (value*180.0/PI) / cdelt;
+        else if (unitsVal == 2) length = (value/60.0) / cdelt;
+        else if (unitsVal == 3) length = (value/3600.0) / cdelt;
+        length = value / cdelt;
+
     } else if (coordFrame == "Pixel") {
         value = parseFloat(val);
-        coord = value;
+        length = value;
     }
-    return coord;
+    return length;
 }
 
 /**
@@ -856,20 +867,20 @@ function parseCrtfArcLength (val) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
     angleUnits = newArray("deg", "rad", "arcmin", "arcsec", "pix");
     unitsVal = -1;
-    coord = -1;
+    length = -1;
 
     for (j=0; j<angleUnits.length; j++)
         if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
     // case of request without units to use with polygon
-    if (unitsVal == -1) return coord;
+    if (unitsVal == -1) return length;
 
     value = parseFloat(substring(val, 0, indexOf(val, angleUnits[unitsVal])));
-    if      (unitsVal == 0) coord = value / cdelt;
-    else if (unitsVal == 1) coord = (value*180.0/PI) / cdelt;
-    else if (unitsVal == 2) coord = (value/60.0) / cdelt;
-    else if (unitsVal == 3) coord = (value/3600.0) / cdelt;
-    else if (unitsVal == 4) coord = value;
-    return coord;
+    if      (unitsVal == 0) length = value / cdelt;
+    else if (unitsVal == 1) length = (value*180.0/PI) / cdelt;
+    else if (unitsVal == 2) length = (value/60.0) / cdelt;
+    else if (unitsVal == 3) length = (value/3600.0) / cdelt;
+    else if (unitsVal == 4) length = value;
+    return length;
 }
 
 /**
@@ -885,23 +896,23 @@ function parseDs9ArcLength (val, coordFrame) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
     angleUnits = newArray("deg", "rad", "\'", "\"");
     unitsVal = -1;
-    coord = -1;
+    length = -1;
     if (coordFrame == "icrs") {
         for (j=0; j<angleUnits.length; j++)
             if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
         if (unitsVal == -1) value = parseFloat(val);
         else value = parseFloat(
             substring(val, 0, indexOf(val, angleUnits[unitsVal])));
-        if      (unitsVal == 0) coord = value / cdelt;
-        else if (unitsVal == 1) coord = (value*180.0/PI) / cdelt;
-        else if (unitsVal == 2) coord = (value/60.0) / cdelt;
-        else if (unitsVal == 3) coord = (value/3600.0) / cdelt;
-        else coord = value / cdelt;  // degrees when no symbol is present
+        if      (unitsVal == 0) length = value / cdelt;
+        else if (unitsVal == 1) length = (value*180.0/PI) / cdelt;
+        else if (unitsVal == 2) length = (value/60.0) / cdelt;
+        else if (unitsVal == 3) length = (value/3600.0) / cdelt;
+        else length = value / cdelt;  // degrees when no symbol is present
     } else if (coordFrame == "image") {
         value = parseFloat(val);
-        coord = value;
+        length = value;
     }
-    return coord;
+    return length;
 }
 
 
