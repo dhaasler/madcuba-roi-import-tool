@@ -27,13 +27,13 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
         the array data[0] (i.e data[0] is "rotbox " and not "rotbox") */
         data = split(rows[3], ")(,;");
 
-        /* uncomment for quick data log */
-        print("New run");
-        print(coordFrame[0]);
-        print(coordSystem[0]);
-        for (j=0; j<data.length; j++) {
-            print("data[" + j + "]: '" + data[j] + "'");
-        }
+        // /* uncomment for quick data log */
+        // print("New run");
+        // print(coordFrame[0]);
+        // print(coordSystem[0]);
+        // for (j=0; j<data.length; j++) {
+        //     print("data[" + j + "]: '" + data[j] + "'");
+        // }
 
         importMadcubaRoi(data, coordFrame[0], coordSystem[0]);
         run("GET SPECTRUM", "roi");
