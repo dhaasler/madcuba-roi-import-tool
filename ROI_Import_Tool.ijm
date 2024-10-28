@@ -6,7 +6,7 @@
  */
 
 var version = "v1.4.0";
-var date = "20241025";
+var date = "20241028";
 var changelog = "Add MADCUBA ROI support";
 
 macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
@@ -18,7 +18,7 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
 
     if (startsWith(rows[0],"// MADCUBA") == 1) {
         /* Search for units and coordinates system */
-        units = split(rows[1], "// ");  // it is an array with only one object
+        coordFrame = split(rows[1], "// ");  // it is an array with only one object
         coordSystem = split(rows[2], "// ");
         /* Separate the data into an array, data[0] contains the RoI type
         Some of these strings are preceded or followed by a blank space. 
@@ -29,13 +29,13 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
 
         /* uncomment for quick data log */
         print("New run");
-        print(units[0]);
+        print(coordFrame[0]);
         print(coordSystem[0]);
         for (j=0; j<data.length; j++) {
             print("data[" + j + "]: '" + data[j] + "'");
         }
 
-        importMadcubaRoi(data, units[0], coordSystem[0]);
+        importMadcubaRoi(data, coordFrame[0], coordSystem[0]);
         run("GET SPECTRUM", "roi");
 
     
@@ -67,7 +67,7 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
 
     if (startsWith(rows[0],"# Region file format: DS9") == 1) {  // DS9 file
         /* search the coord system units string (icrs or image) and store it */
-        coordUnitSystem = rows[2];
+        coordFrame = rows[2];
 
         /* Separate the data into an array, data[0] contains the RoI type
         Some of these strings are preceded or followed by a blank space. 
@@ -78,12 +78,12 @@ macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o T
 
         // /* uncomment for quick data log */
         // print("New run");
-        // print(coordUnitSystem);
+        // print(coordFrame);
         // for (j=0; j<data.length; j++) {
         //     print("data[" + j + "]: '" + data[j] + "'");
         // }
 
-        importDs9Roi(data, coordUnitSystem);
+        importDs9Roi(data, coordFrame);
         run("GET SPECTRUM", "roi");
     }
 
@@ -121,6 +121,7 @@ macro "ROI Import Action Tool Options" {
     + changelog);
 }
 
+
 /*
  * ---------------------------------
  * ---------------------------------
@@ -129,12 +130,18 @@ macro "ROI Import Action Tool Options" {
  * ---------------------------------
  */
 
+/********************************************************************/
+/************************* Import functions *************************/
+/********************************************************************/
+
 /**
  * Parse a Madcuba data list and create a madcuba ROI
  * 
  * @param data  Data list containing ROI parameters
+ * @param coordFrame  coordinates frame used in the ROI
+ * @param coordSystem  coordinates system used in the ROI
  */
-function importMadcubaRoi(data, units, coordSystem) {
+function importMadcubaRoi(data, coordFrame, coordSystem) {
 
     geometry = newArray ("makePoint", "makeLine", "makePolyline",
                          "makeRectangle", "makeOval", "makeEllipse",
@@ -142,7 +149,7 @@ function importMadcubaRoi(data, units, coordSystem) {
     
     /* POINT */
     if (indexOf(data[0], geometry[0]) == 0) {
-        point = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        point = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x = parseFloat(point[0]);
         y = parseFloat(point[1]);
         makePoint(x, y);
@@ -150,10 +157,10 @@ function importMadcubaRoi(data, units, coordSystem) {
 
     /* LINE */
     } else if (indexOf(data[0], geometry[1]) == 0) {
-        point1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        point1 = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x1 = parseFloat(point1[0]);
         y1 = parseFloat(point1[1]);
-        point2 = parseMadcubaCoords(data[3], data[4], units, coordSystem);
+        point2 = parseMadcubaCoords(data[3], data[4], coordFrames, coordSystem);
         x2 = parseFloat(point2[0]);
         y2 = parseFloat(point2[1]);
         makeLine(x1, y1, x2, y2);
@@ -168,7 +175,8 @@ function importMadcubaRoi(data, units, coordSystem) {
         x = newArray((data.length-1)/2);
         y = newArray((data.length-1)/2);
         for (j=0; j<x.length; j++) {
-            b = parseMadcubaCoords(data[2*j+1], data[2*j+2], units, coordSystem); 
+            b = parseMadcubaCoords(data[2*j+1], data[2*j+2],
+                                   coordFrame, coordSystem); 
             x[j] = parseFloat(call(
                 "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
             y[j] = parseFloat(call(
@@ -179,22 +187,22 @@ function importMadcubaRoi(data, units, coordSystem) {
 
     /* RECTANGLE */
     } else if (indexOf(data[0], geometry[3]) == 0) {
-        corner1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        corner1 = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x1 = parseFloat(corner1[0]);
         y1 = parseFloat(corner1[1]);
-        width = parseMadcubaArcLength(data[3], units);
-        height = parseMadcubaArcLength(data[4], units);
+        width = parseMadcubaArcLength(data[3], coordFrame);
+        height = parseMadcubaArcLength(data[4], coordFrame);
         /* MADCUBA does the rounding when working with makeRectangle */
         makeRectangle(x1, y1, width, height);
         // print(x1, y1, width, height);
 
     /* OVAL */
     } else if (indexOf(data[0], geometry[4]) == 0) {
-        corner1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        corner1 = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x1 = parseFloat(corner1[0]);
         y1 = parseFloat(corner1[1]);
-        width = parseMadcubaArcLength(data[3], units);
-        height = parseMadcubaArcLength(data[4], units);
+        width = parseMadcubaArcLength(data[3], coordFrame);
+        height = parseMadcubaArcLength(data[4], coordFrame);
         /* MADCUBA does the rounding when working with makeRectangle */
         makeOval(x1, y1, width, height);
         // print(x1, y1, width, height);
@@ -204,10 +212,10 @@ function importMadcubaRoi(data, units, coordSystem) {
     because the file ends after the last vertex. We do not need an 
     ending condition. */
     } else if (indexOf(data[0], geometry[5]) == 0) {
-        point1 = parseMadcubaCoords(data[1], data[2], units, coordSystem);
+        point1 = parseMadcubaCoords(data[1], data[2], coordFrame, coordSystem);
         x1 = parseFloat(point1[0]);
         y1 = parseFloat(point1[1]);
-        point2 = parseMadcubaCoords(data[3], data[4], units, coordSystem);
+        point2 = parseMadcubaCoords(data[3], data[4], coordFrame, coordSystem);
         x2 = parseFloat(point2[0]);
         y2 = parseFloat(point2[1]);
         aspectRatio = parseFloat(data[5]);
@@ -222,7 +230,8 @@ function importMadcubaRoi(data, units, coordSystem) {
         x = newArray((data.length-1)/2);
         y = newArray((data.length-1)/2);
         for (j=0; j<x.length; j++) {
-            b = parseMadcubaCoords(data[2*j+1], data[2*j+2], units, coordSystem); 
+            b = parseMadcubaCoords(data[2*j+1], data[2*j+2],
+                                   coordFrame, coordSystem); 
             x[j] = parseFloat(call(
                 "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
             y[j] = parseFloat(call(
@@ -538,14 +547,15 @@ function importCrtfRoi(data) {
  * Parse a ds9 data list and create a madcuba ROI
  * 
  * @param data  Data list containing ROI parameters
+ * @param coordFrame  coordinates frame used in the ROI
  */
-function importDs9Roi(data, coordUnitSystem) {
+function importDs9Roi(data, coordFrame) {
 
     geometry = newArray ("point", "line", "polyline", "box",  
                          "polygon", "circle", "ellipse"); 
     /* POINT */
     if (indexOf(data[0], geometry[0]) == 0) {
-        point = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        point = parseDs9Coords(data[1], data[2], coordFrame);
         x = parseFloat(point[0]);
         y = parseFloat(point[1]);
         makePoint(x, y);
@@ -553,10 +563,10 @@ function importDs9Roi(data, coordUnitSystem) {
     
     /* LINE */
     } else if (indexOf(data[0], geometry[1]) == 0) {
-        point1 = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        point1 = parseDs9Coords(data[1], data[2], coordFrame);
         x1 = parseFloat(point1[0]);
         y1 = parseFloat(point1[1]);
-        point2 = parseDs9Coords(data[3], data[4], coordUnitSystem);
+        point2 = parseDs9Coords(data[3], data[4], coordFrame);
         x2 = parseFloat(point2[0]);
         y2 = parseFloat(point2[1]);
         makeLine(x1, y1, x2, y2);
@@ -571,7 +581,7 @@ function importDs9Roi(data, coordUnitSystem) {
         x = newArray(round(data.length/2));
         y = newArray(round(data.length/2));
         do {         
-            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
+            b = parseDs9Coords(data[numb], data[numb+1], coordFrame); 
             x[idx] = 
                 parseFloat(call(
                     "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
@@ -597,11 +607,11 @@ function importDs9Roi(data, coordUnitSystem) {
     /* BOX */
     } else if ((indexOf(data[0], geometry[3]) == 0)) {
         if ((data[5] == "0") || (data[5] == " 0")) {  // ROTATION=0
-            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+            center = parseDs9Coords(data[1], data[2], coordFrame);
             x_center = parseFloat(center[0]);
             y_center = parseFloat(center[1]);
-            width = parseDs9ArcLength(data[3], coordUnitSystem);
-            height = parseDs9ArcLength(data[4], coordUnitSystem);
+            width = parseDs9ArcLength(data[3], coordFrame);
+            height = parseDs9ArcLength(data[4], coordFrame);
             x1 = x_center - parseFloat(width/2);
             y1 = y_center - parseFloat(height/2);
             x_width = parseFloat(width);
@@ -610,9 +620,9 @@ function importDs9Roi(data, coordUnitSystem) {
             makeRectangle(x1, y1, x_width, y_width);
         } else if ((data[5] != "0") && (data[5] != " 0")) {  // ROTATED
             pa = parseDs9Angle(data[5]);
-            center = parseDs9Coords(data[1], data[2], coordUnitSystem);
-            b1 = parseDs9ArcLength(data[3], coordUnitSystem);
-            b2 = parseDs9ArcLength(data[4], coordUnitSystem);
+            center = parseDs9Coords(data[1], data[2], coordFrame);
+            b1 = parseDs9ArcLength(data[3], coordFrame);
+            b2 = parseDs9ArcLength(data[4], coordFrame);
             rotatedRect(parseFloat(center[0]), parseFloat(center[1]),
                         b1/2, b2/2, pa);
         }
@@ -625,7 +635,7 @@ function importDs9Roi(data, coordUnitSystem) {
         x = newArray(round(data.length/2));
         y = newArray(round(data.length/2));
         do {
-            b = parseDs9Coords(data[numb], data[numb+1], coordUnitSystem); 
+            b = parseDs9Coords(data[numb], data[numb+1], coordFrame); 
             x[idx] = 
                 parseFloat(call(
                     "CONVERT_PIXELS_COORDINATES.fits2ImageJX", b[0]));
@@ -652,23 +662,23 @@ function importDs9Roi(data, coordUnitSystem) {
     /* CIRCLE  */
     } else if (indexOf(data[0], geometry[5]) == 0) {
         pa = 0;
-        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        center = parseDs9Coords(data[1], data[2], coordFrame);
         xCenter = parseFloat(center[0]);
         yCenter = parseFloat(center[1]);
-        radius = parseDs9ArcLength(data[3], coordUnitSystem);
+        radius = parseDs9ArcLength(data[3], coordFrame);
         toEllipse(xCenter, yCenter, parseFloat(abs(radius)),
                     parseFloat(abs(radius)), pa);
         
     /* ELLIPSE */
     } else if (indexOf(data[0], geometry[6]) == 0) {
         pa = parseDs9Angle(data[5]);
-        center = parseDs9Coords(data[1], data[2], coordUnitSystem);
+        center = parseDs9Coords(data[1], data[2], coordFrame);
         xCenter = parseFloat(center[0]);
         yCenter = parseFloat(center[1]);
         /* For an ellipse the first axis in the code is the Yaxis.
             * Lets change the order to have Xaxis first and then Yaxis. */
-        ax_y = parseDs9ArcLength(data[3], coordUnitSystem);
-        ax_x = parseDs9ArcLength(data[4], coordUnitSystem);
+        ax_y = parseDs9ArcLength(data[3], coordFrame);
+        ax_x = parseDs9ArcLength(data[4], coordFrame);
         /* Set the major axis and convert the position angle if needed.
         In 'toEllipse' the position angle is that of the major axis, but
         in DS9 it is the angle of the X-axis. The position angle must
@@ -690,51 +700,35 @@ function importDs9Roi(data, coordUnitSystem) {
 }
 
 
-/**
- * Convert crtf angle to radians
- *
- * @param val  Input angle with units
- * @return  Converted angle in radians
- */
-function parseCrtfAngle (val) {
-    coordUnits = newArray("deg", "rad", "arcmin", "arcsec");
-    for (j=0; j<coordUnits.length; j++) 
-        if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
-    angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
-    if (unitsval == 0)  angle = angle*PI/180.0;
-    else if (unitsval == 2) angle = (angle*PI/(180.0*60.0));
-    else if (unitsval == 3) angle = (angle*PI/(180.0*3600.0));
-    return angle;
-}
-
+/********************************************************************/
+/******************** Coordinates to FITS pixels ********************/
+/********************************************************************/
 
 /**
- * Convert ds9 angle to radians
+ * Convert Madcuba coordinates to a FITS image pixel
  *
- * @param val  Input angle with units
- * @return  Converted angle in radians
+ * @param ra  RA with units
+ * @param dec  DEC with units
+ * @param coordFrame  coordinates frame used in the ROI
+ * @param coordSystem  coordinates system used in the ROI
+ * @return  Pixel of the image containing input coordinates
  */
-function parseDs9Angle (val) {
-    coordUnits = newArray("deg", "rad", "\'", "\"");
-    unitsFound = false;
-    for (j=0; j<coordUnits.length; j++) {
-        if (indexOf(val, coordUnits[j]) != -1) {
-            unitsval=j; // read units
-            unitsFound = true;
-        }
-    }
-    if (unitsFound == true) {
-        angle = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
-        if (unitsval == 0)  angle = angle*PI/180.0;
-        else if (unitsval == 2) angle = (angle*PI/(180.0*60.0));
-        else if (unitsval == 3) angle = (angle*PI/(180.0*3600.0));
-    } else {  // degrees when no symbol is present
-        angle = parseFloat(val);
-        angle = angle*PI/180.0;
-    }
-    return angle;
-}
+function parseMadcubaCoords (ra, dec, coordFrame, coordSystem) {
+    output = newArray(2);
+    if (coordFrame == "World") {
+        rafin = substring(ra, 0, indexOf(ra, "deg"));
+        decfin = substring(dec, 0, indexOf(dec, "deg"));
+        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX",
+                         rafin, decfin, coordSystem);
+        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
+                         rafin, decfin, coordSystem);
 
+    } else if (coordFrame == "Pixel") {
+        output[0] = toString(parseFloat(ra));
+        output[1] = toString(parseFloat(dec));
+    }
+    return output;
+}
 
 /**
  * Convert crtf coordinates to a FITS image pixel
@@ -745,11 +739,11 @@ function parseDs9Angle (val) {
  */
 function parseCrtfCoords (ra, dec) {
     coordUnits = newArray ("deg", "rad", "pix");
-    unitsval= 10;
+    unitsVal= 10;
     output = newArray(2);
     for (j=0; j<coordUnits.length; j++)
-        if (indexOf(ra, coordUnits[j]) != -1) unitsval=j; // read units
-    if (unitsval == 10) {   // Sexagesimal Coordinates
+        if (indexOf(ra, coordUnits[j]) != -1) unitsVal=j; // read units
+    if (unitsVal == 10) {   // Sexagesimal Coordinates
         // right ascension
         par = split(ra, "hdms:");
         if (par.length == 1 && indexOf(ra, ".") <= 5) {
@@ -776,10 +770,10 @@ function parseCrtfCoords (ra, dec) {
         output[1] = 
             call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
     } else {
-        rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsval]));
-        decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsval]));
-        if (unitsval == 0 || unitsval == 1) {
-            if (unitsval == 1) {
+        rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsVal]));
+        decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsVal]));
+        if (unitsVal == 0 || unitsVal == 1) {
+            if (unitsVal == 1) {
                 rafin =  rafin*180.0/PI;
                 decfin = decfin*180.0/PI;
             }
@@ -790,7 +784,7 @@ function parseCrtfCoords (ra, dec) {
                 call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
                      rafin, decfin, "");
 
-        } else if ( unitsval == 2) {
+        } else if ( unitsVal == 2) {
             /* correction to change 0,0 starting point to 1,1 starting point
             of the FITS standard used in madcuba */
             corr = 1;
@@ -801,52 +795,32 @@ function parseCrtfCoords (ra, dec) {
     return output;
 }
 
-
-/**
- * Convert Madcuba coordinates to a FITS image pixel
- *
- * @param ra  RA with units
- * @param dec  DEC with units
- * @return  Pixel of the image containing input coordinates
- */
-function parseMadcubaCoords (ra, dec, units, coordSystem) {
-    output = newArray(2);
-    if (units == "World") {
-        rafin = substring(ra, 0, indexOf(ra, "deg"));
-        decfin = substring(dec, 0, indexOf(dec, "deg"));
-        output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX",
-                         rafin, decfin, coordSystem);
-        output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
-                         rafin, decfin, coordSystem);
-
-    } else if (units == "Pixel") {
-        output[0] = toString(parseFloat(ra));
-        output[1] = toString(parseFloat(dec));
-    }
-    return output;
-}
-
-
 /**
  * Convert ds9 coordinates to a FITS image pixel
  *
  * @param ra  RA with units
  * @param dec  DEC with units
+ * @param coordFrame  coordinates frame used in the ROI
  * @return  Pixel of the image containing input coordinates
  */
-function parseDs9Coords (ra, dec, coordUnitSystem) {
+function parseDs9Coords (ra, dec, coordFrame) {
     output = newArray(2);
-    if (coordUnitSystem == "icrs") {
+    if (coordFrame == "icrs") {
         output[0] = call("CONVERT_PIXELS_COORDINATES.coord2FitsX", ra, dec, "");
         output[1] = call("CONVERT_PIXELS_COORDINATES.coord2FitsY", ra, dec, "");
 
-    } else if (coordUnitSystem == "image") {
+    } else if (coordFrame == "image") {
         output[0] = toString(parseFloat(ra));
         output[1] = toString(parseFloat(dec));
     }
     return output;
 }
 
+
+
+/********************************************************************/
+/*********************** Arc to pixel length ************************/
+/********************************************************************/
 
 /**
  * Convert madcuba arcs in the sky to pixels
@@ -854,21 +828,21 @@ function parseDs9Coords (ra, dec, coordUnitSystem) {
  * not be accurate for non-linear projections where CDELT1 != CDELT2.
  *
  * @param val  arc in the sky with units
+ * @param coordFrame  coordinates frame used in the ROI
  * @return  Converted arc
  */
-function parseMadcubaArcLength (val, units) {
+function parseMadcubaArcLength (val, coordFrame) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
     coord = -1;
-    if (units == "World") {
+    if (coordFrame == "World") {
         value = parseFloat(substring(val, 0, indexOf(val, "deg")));
         coord = value / cdelt;
-    } else if (units == "Pixel") {
+    } else if (coordFrame == "Pixel") {
         value = parseFloat(val);
         coord = value;
     }
     return coord;
 }
-
 
 /**
  * Convert crtf arcs in the sky to pixels
@@ -880,24 +854,23 @@ function parseMadcubaArcLength (val, units) {
  */
 function parseCrtfArcLength (val) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
-    coordUnits = newArray("deg", "rad", "arcmin", "arcsec", "pix");
-    unitsval = -1;
+    angleUnits = newArray("deg", "rad", "arcmin", "arcsec", "pix");
+    unitsVal = -1;
     coord = -1;
 
-    for (j=0; j<coordUnits.length; j++)
-        if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
+    for (j=0; j<angleUnits.length; j++)
+        if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
     // case of request without units to use with polygon
-    if (unitsval == -1) return coord;
+    if (unitsVal == -1) return coord;
 
-    value = parseFloat(substring(val, 0, indexOf(val, coordUnits[unitsval])));
-    if      (unitsval == 0) coord = value / cdelt;
-    else if (unitsval == 1) coord = (value*180.0/PI) / cdelt;
-    else if (unitsval == 2) coord = (value/60.0) / cdelt;
-    else if (unitsval == 3) coord = (value/3600.0) / cdelt;
-    else if (unitsval == 4) coord = value;
+    value = parseFloat(substring(val, 0, indexOf(val, angleUnits[unitsVal])));
+    if      (unitsVal == 0) coord = value / cdelt;
+    else if (unitsVal == 1) coord = (value*180.0/PI) / cdelt;
+    else if (unitsVal == 2) coord = (value/60.0) / cdelt;
+    else if (unitsVal == 3) coord = (value/3600.0) / cdelt;
+    else if (unitsVal == 4) coord = value;
     return coord;
 }
-
 
 /**
  * Convert ds9 arcs in the sky to pixels
@@ -905,31 +878,88 @@ function parseCrtfArcLength (val) {
  * not be accurate for non-linear projections where CDELT1 != CDELT2.
  *
  * @param val  arc in the sky with units
+ * @param coordFrame  coordinates frame used in the ROI
  * @return  Converted arc
  */
-function parseDs9ArcLength (val, coordUnitSystem) {
+function parseDs9ArcLength (val, coordFrame) {
     cdelt = parseFloat(call("FITS_CARD.getDbl","CDELT2"));
-    coordUnits = newArray("deg", "rad", "\'", "\"");
-    unitsval = -1;
+    angleUnits = newArray("deg", "rad", "\'", "\"");
+    unitsVal = -1;
     coord = -1;
-    if (coordUnitSystem == "icrs") {
-        for (j=0; j<coordUnits.length; j++)
-            if (indexOf(val, coordUnits[j]) != -1) unitsval=j; // read units
-        if (unitsval == -1) value = parseFloat(val);
+    if (coordFrame == "icrs") {
+        for (j=0; j<angleUnits.length; j++)
+            if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
+        if (unitsVal == -1) value = parseFloat(val);
         else value = parseFloat(
-            substring(val, 0, indexOf(val, coordUnits[unitsval])));
-        if      (unitsval == 0) coord = value / cdelt;
-        else if (unitsval == 1) coord = (value*180.0/PI) / cdelt;
-        else if (unitsval == 2) coord = (value/60.0) / cdelt;
-        else if (unitsval == 3) coord = (value/3600.0) / cdelt;
+            substring(val, 0, indexOf(val, angleUnits[unitsVal])));
+        if      (unitsVal == 0) coord = value / cdelt;
+        else if (unitsVal == 1) coord = (value*180.0/PI) / cdelt;
+        else if (unitsVal == 2) coord = (value/60.0) / cdelt;
+        else if (unitsVal == 3) coord = (value/3600.0) / cdelt;
         else coord = value / cdelt;  // degrees when no symbol is present
-    } else if (coordUnitSystem == "image") {
+    } else if (coordFrame == "image") {
         value = parseFloat(val);
         coord = value;
     }
     return coord;
 }
 
+
+
+/********************************************************************/
+/************************* Angle to radians *************************/
+/********************************************************************/
+
+/**
+ * Convert crtf angle to radians
+ *
+ * @param val  Input angle with units
+ * @return  Converted angle in radians
+ */
+function parseCrtfAngle (val) {
+    angleUnits = newArray("deg", "rad", "arcmin", "arcsec");
+    for (j=0; j<angleUnits.length; j++) 
+        if (indexOf(val, angleUnits[j]) != -1) unitsVal=j; // read units
+    angle = parseFloat(substring(val, 0, indexOf(val, angleUnits[unitsVal])));
+    if (unitsVal == 0)  angle = angle*PI/180.0;
+    else if (unitsVal == 2) angle = (angle*PI/(180.0*60.0));
+    else if (unitsVal == 3) angle = (angle*PI/(180.0*3600.0));
+    return angle;
+}
+
+
+/**
+ * Convert ds9 angle to radians
+ *
+ * @param val  Input angle with units
+ * @return  Converted angle in radians
+ */
+function parseDs9Angle (val) {
+    angleUnits = newArray("deg", "rad", "\'", "\"");
+    unitsFound = false;
+    for (j=0; j<angleUnits.length; j++) {
+        if (indexOf(val, angleUnits[j]) != -1) {
+            unitsVal=j; // read units
+            unitsFound = true;
+        }
+    }
+    if (unitsFound == true) {
+        angle = parseFloat(
+            substring(val, 0, indexOf(val, angleUnits[unitsVal])));
+        if (unitsVal == 0)  angle = angle*PI/180.0;
+        else if (unitsVal == 2) angle = (angle*PI/(180.0*60.0));
+        else if (unitsVal == 3) angle = (angle*PI/(180.0*3600.0));
+    } else {  // degrees when no symbol is present
+        angle = parseFloat(val);
+        angle = angle*PI/180.0;
+    }
+    return angle;
+}
+
+
+/********************************************************************/
+/************************** ROI functions ***************************/
+/********************************************************************/
 
 /**
  * Draw a rotated rectangle given the input parameters
