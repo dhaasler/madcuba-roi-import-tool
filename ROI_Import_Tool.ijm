@@ -809,8 +809,8 @@ function parseMadcubaAnnulusCoords (ra, dec) {
         } else if (unitsVal == 4) {
             /* correction to change 0,0 starting point to 1,1 starting point
             of the FITS standard used in madcuba */
-            output[0] = toString(parseFloat(rafin) + corr);
-            output[1] = toString(parseFloat(decfin) + corr);
+            output[0] = toString(parseFloat(rafin));
+            output[1] = toString(parseFloat(decfin));
         }
     }
     return output;
