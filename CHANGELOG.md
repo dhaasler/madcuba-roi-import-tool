@@ -2,6 +2,7 @@
 
 | Version       | Date       | Info                                             | Details |
 | ------------- | ---------- | ------------------------------------------------ | ------- |
+| v1.5.0        | 2024-10-31 | Add support for MADCUBA Annulus                  |         |
 | v1.4.0        | 2024-10-25 | Add support for custom MADCUBA ROIs              |         |
 | v1.3.0        | 2024-10-01 | Add support for some matplotlib patches          |         |
 | v1.2.0        | 2024-09-30 | Add support for DS9 ROIs                         |         |

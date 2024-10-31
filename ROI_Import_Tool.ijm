@@ -5,9 +5,9 @@
  * A cube or image must be opened and selected before running this macro
  */
 
-var version = "v1.4.0";
-var date = "20241028";
-var changelog = "Add MADCUBA ROI support";
+var version = "v1.5.0";
+var date = "20241031";
+var changelog = "Add MADCUBA Annulus support";
 
 macro "ROI Import Action Tool - C037 T0608L T4608O Ta608A Tf608D T2f10R T8f09o Tef09I" {
 
@@ -145,7 +145,7 @@ function importMadcubaRoi(data, coordFrame, coordSystem) {
 
     geometry = newArray ("makePoint", "makeLine", "makePolyline",
                          "makeRectangle", "makeOval", "makeEllipse",
-                         "makePolygon"); 
+                         "makePolygon", "makeAnnulus"); 
     
     /* POINT */
     if (indexOf(data[0], geometry[0]) == 0) {
@@ -240,6 +240,29 @@ function importMadcubaRoi(data, coordFrame, coordSystem) {
         makeSelection("polygon", x, y);
         // Array.show(x, y);
 
+    /* ANNULUS */
+    /* The annulus was coded to be able to use units independently. It uses a
+    personalized version of parseCrtfcoordinates and the parseCrtfArclength */
+    } else if (indexOf(data[0], geometry[7]) == 0) {
+        center = parseMadcubaAnnulusCoords(data[1], data[2]);
+        x = parseFloat(center[0]);
+        y = parseFloat(center[1]);
+        r1 = parseCrtfArcLength(data[3]);
+        r2 = parseCrtfArcLength(data[4]);
+        paintR1 = floor(r1) + 0.5;
+        paintR2 = floor(r2) + 0.5;
+        outerX0 = round(x) - paintR2;
+        outerY0 = round(y) - paintR2;
+        innerX0 = round(x) - paintR1;
+        innerY0 = round(y) - paintR1;
+        makeOval(outerX0, outerY0, paintR2*2, paintR2*2);
+        setKeyDown("alt");
+        makeOval(innerX0, innerY0, paintR1*2, paintR1*2);
+        setKeyDown("none");
+        /* if GET SPECTRUM is launched too closely after the previous code sometimes
+        it prompts an error message: CANNOT GENERATE SPECTRUM. With a little wait
+        time it does not fail. I have no idea why. */
+        wait(50);
     } else {
         exit("Error: MADCUBA RoI type <" + data[0] + "> not recognized.");
     }
@@ -730,15 +753,8 @@ function parseMadcubaCoords (ra, dec, coordFrame, coordSystem) {
     return output;
 }
 
-/**
- * Convert crtf coordinates to a FITS image pixel
- *
- * @param ra  RA with units
- * @param dec  DEC with units
- * @return  Pixel of the image containing input coordinates
- */
-function parseCrtfCoords (ra, dec) {
-    coordUnits = newArray ("deg", "rad", "pix");
+function parseMadcubaAnnulusCoords (ra, dec) {
+    coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
     unitsVal= 10;
     output = newArray(2);
     for (j=0; j<coordUnits.length; j++)
@@ -772,19 +788,95 @@ function parseCrtfCoords (ra, dec) {
     } else {
         rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsVal]));
         decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsVal]));
-        if (unitsVal == 0 || unitsVal == 1) {
+        if (unitsVal == 0 || unitsVal == 1 || unitsVal == 2 || unitsVal == 3) {
             if (unitsVal == 1) {
-                rafin =  rafin*180.0/PI;
-                decfin = decfin*180.0/PI;
+                rafin =  parseFloat(rafin)*180.0/PI;
+                decfin = parseFloat(decfin)*180.0/PI;
+            } else if (unitsVal == 2) {
+                rafin =  parseFloat(rafin)/60;
+                decfin = parseFloat(decfin)/60;
+            } else if (unitsVal == 3) {
+                rafin =  parseFloat(rafin)/3600;
+                decfin = parseFloat(decfin)/3600;
             }
             output[0] = 
                 call("CONVERT_PIXELS_COORDINATES.coord2FitsX", 
-                     rafin, decfin, "");
+                     d2s(rafin, 15), d2s(decfin, 15), "");
             output[1] = 
                 call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
-                     rafin, decfin, "");
+                     d2s(rafin, 15), d2s(decfin, 15), "");
 
-        } else if ( unitsVal == 2) {
+        } else if (unitsVal == 4) {
+            /* correction to change 0,0 starting point to 1,1 starting point
+            of the FITS standard used in madcuba */
+            output[0] = toString(parseFloat(rafin) + corr);
+            output[1] = toString(parseFloat(decfin) + corr);
+        }
+    }
+    return output;
+}
+
+/**
+ * Convert crtf coordinates to a FITS image pixel
+ *
+ * @param ra  RA with units
+ * @param dec  DEC with units
+ * @return  Pixel of the image containing input coordinates
+ */
+function parseCrtfCoords (ra, dec) {
+    coordUnits = newArray ("deg", "rad", "arcmin", "arcsec", "pix");
+    unitsVal= 10;
+    output = newArray(2);
+    for (j=0; j<coordUnits.length; j++)
+        if (indexOf(ra, coordUnits[j]) != -1) unitsVal=j; // read units
+    if (unitsVal == 10) {   // Sexagesimal Coordinates
+        // right ascension
+        par = split(ra, "hdms:");
+        if (par.length == 1 && indexOf(ra, ".") <= 5) {
+            par = split(ra, ".");
+            if (par.length > 3) par[2] = par[2] + "." + par[3];
+        }
+        rafin = (parseFloat(par[0]) + parseFloat(par[1])/60.0
+                + parseFloat(par[2])/3600.0) * 15.0;
+        // declination
+        par = split(dec, "hdms:");
+        if (par.length == 1 && indexOf(dec, ".") <= 5) {
+            par = split(dec,".");
+            if (par.length > 3) par[2] = par[2] + "." + par[3];
+        }
+        if (indexOf(dec, "-") != -1)
+            decfin = parseFloat(par[0]) - parseFloat(par[1])/60.0
+                     - parseFloat(par[2])/3600.0;
+        else 
+            decfin = parseFloat(par[0]) + parseFloat(par[1])/60.0
+                     + parseFloat(par[2])/3600.0;
+
+        output[0] = 
+            call("CONVERT_PIXELS_COORDINATES.coord2FitsX", rafin, decfin, "");
+        output[1] = 
+            call("CONVERT_PIXELS_COORDINATES.coord2FitsY", rafin, decfin, "");
+    } else {
+        rafin = substring(ra, 0, indexOf(ra, coordUnits[unitsVal]));
+        decfin = substring(dec, 0, indexOf(dec, coordUnits[unitsVal]));
+        if (unitsVal == 0 || unitsVal == 1 || unitsVal == 2 || unitsVal == 3) {
+            if (unitsVal == 1) {
+                rafin =  parseFloat(rafin)*180.0/PI;
+                decfin = parseFloat(decfin)*180.0/PI;
+            } else if (unitsVal == 2) {
+                rafin =  parseFloat(rafin)/60;
+                decfin = parseFloat(decfin)/60;
+            } else if (unitsVal == 3) {
+                rafin =  parseFloat(rafin)/3600;
+                decfin = parseFloat(decfin)/3600;
+            }
+            output[0] = 
+                call("CONVERT_PIXELS_COORDINATES.coord2FitsX", 
+                     d2s(rafin, 15), d2s(decfin, 15), "");
+            output[1] = 
+                call("CONVERT_PIXELS_COORDINATES.coord2FitsY",
+                     d2s(rafin, 15), d2s(decfin, 15), "");
+
+        } else if (unitsVal == 4) {
             /* correction to change 0,0 starting point to 1,1 starting point
             of the FITS standard used in madcuba */
             corr = 1;
