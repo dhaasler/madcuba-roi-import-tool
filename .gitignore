@@ -11,3 +11,7 @@ images/
 # Log files
 *.log
 *.last
+
+# mac stuff
+.DS_Store
+*/.DS_Store
