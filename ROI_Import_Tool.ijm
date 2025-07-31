@@ -371,7 +371,7 @@ function importPyRoi(data) {
                 "CONVERT_PIXELS_COORDINATES.fits2ImageJY", b[1]));
         }
         makeSelection("polygon", x, y);
-        Array.show(x, y);
+        // Array.show(x, y);
 
     } else {
         exit("Error: PYROI RoI type <" + data[0] + "> not recognized.");
